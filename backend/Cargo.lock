@@ -2644,6 +2644,7 @@ dependencies = [
  "libc",
  "log",
  "nanoid",
+ "notify",
  "notify-rust",
  "once_cell",
  "oqto-files",

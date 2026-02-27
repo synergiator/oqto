@@ -337,6 +337,12 @@ Implementation:
 ...
 
 
+### [octo-p3n2.8] Auth middleware: support api_key query param on WebSocket paths (P2, task)
+Extend is_websocket_auth_path to also accept ?api_key=oqak_xxx on /ws/mux, /voice/stt, /voice/tts. Resolve API key to user_id and create CurrentUser same as JWT path. Update auth priority: Bearer > X-Api-Key > cookie > ?token > ?api_key > X-Dev-User.
+
+### [octo-p3n2.7] oqto web UI: Connect to omni button with omni:// deep-link generation (P2, task)
+In oqto Settings -> API Keys section, add a Connect to omni button. When clicked: auto-create an API key named omni-vanilla, generate omni://link/oqto-pulse?url=<server>&key=<api_key> URL, show it as clickable link and QR code. Clicking opens omni-vanilla which auto-configures the plugin.
+
 ### [oqto-3k0c] mmry port allocation doesn't prevent orphan config collisions (P2, bug)
 When users are deleted from the frontend but not from the OS, their mmry config files retain the port allocation. When the DB record is deleted, that port is freed in the DB but the orphaned mmry-service process still holds it. New users can then be allocated the same port via ensure_mmry_port (which only checks the DB), causing 'Address already in use' crash-loops.
 
@@ -1053,6 +1059,14 @@ Desired behavior: Tool calls hidden by default, toggle to show
 
 ## Closed
 
+- [oqto-xrc6.7] oqto Pulse plugin: link screen and connection management (closed 2026-02-27)
+- [oqto-xrc6.6] oqto Pulse plugin: oqto theme sync (closed 2026-02-27)
+- [oqto-xrc6.5] oqto Pulse plugin: prompt input bar (closed 2026-02-27)
+- [oqto-xrc6.4] oqto Pulse plugin: WebSocket mux for real-time streaming (closed 2026-02-27)
+- [oqto-xrc6.3] oqto Pulse plugin: chat view with oqto-styled messages (closed 2026-02-27)
+- [oqto-xrc6.2] oqto Pulse plugin: session list and status strip (closed 2026-02-27)
+- [oqto-xrc6.1] omni:// deep-link URL scheme handler in omni-vanilla (closed 2026-02-27)
+- [oqto-xrc6] oqto Pulse: omni-vanilla plugin for live session dashboard and chat (closed 2026-02-27)
 - [oqto-34ed] Error propagation: LLM errors visible in frontend with retry progress (closed 2026-02-25)
 - [oqto-a7b8] Enhance eavs mock provider with realistic streaming scenarios (tool calls, errors, multi-turn) (closed 2026-02-25)
 - [oqto-s5bv] E2E streaming reliability test harness using mock provider (closed 2026-02-25)

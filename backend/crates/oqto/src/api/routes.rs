@@ -4,7 +4,7 @@ use axum::extract::DefaultBodyLimit;
 use axum::http::{HeaderValue, Method, header};
 use axum::{
     Router, middleware,
-    routing::{delete, get, post, put},
+    routing::{delete, get, patch, post, put},
 };
 use tower_http::cors::{AllowOrigin, CorsLayer};
 use tower_http::set_header::SetResponseHeaderLayer;
@@ -105,6 +105,27 @@ fn create_router_with_config_and_auth(
             get(handlers::list_project_templates).post(handlers::create_project_from_template),
         )
         .route("/feedback", post(handlers::create_feedback))
+        // Shared workspaces
+        .route(
+            "/shared-workspaces",
+            get(handlers::list_shared_workspaces).post(handlers::create_shared_workspace),
+        )
+        .route(
+            "/shared-workspaces/{workspace_id}",
+            get(handlers::get_shared_workspace)
+                .patch(handlers::update_shared_workspace)
+                .delete(handlers::delete_shared_workspace),
+        )
+        .route(
+            "/shared-workspaces/{workspace_id}/members",
+            get(handlers::list_shared_workspace_members)
+                .post(handlers::add_shared_workspace_member),
+        )
+        .route(
+            "/shared-workspaces/{workspace_id}/members/{user_id}",
+            patch(handlers::update_shared_workspace_member)
+                .delete(handlers::remove_shared_workspace_member),
+        )
         // Session management
         .route("/sessions", get(handlers::list_sessions))
         .route("/sessions", post(handlers::create_session))

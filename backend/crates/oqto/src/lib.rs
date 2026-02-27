@@ -25,6 +25,7 @@ pub mod runner;
 pub mod session;
 pub mod session_ui;
 pub mod settings;
+pub mod shared_workspace;
 pub mod templates;
 pub mod user;
 pub mod user_plane;

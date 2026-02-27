@@ -693,17 +693,33 @@ pub async fn ws_multiplexed_handler(
 
 /// Create a runner client for a user if multi-user mode is enabled.
 fn runner_client_for_user(state: &AppState, user_id: &str) -> Option<RunnerClient> {
+    runner_client_for_linux_user(state, user_id, None)
+}
+
+/// Resolve a runner client for a specific Linux username.
+///
+/// If `linux_username_override` is provided, use that instead of looking up
+/// from user_id. This is used for shared workspaces where the runner runs
+/// as the shared workspace's Linux user, not the requesting user's.
+fn runner_client_for_linux_user(
+    state: &AppState,
+    user_id: &str,
+    linux_username_override: Option<&str>,
+) -> Option<RunnerClient> {
     // Check if we have a socket pattern configured
     if let Some(pattern) = state.runner_socket_pattern.as_deref() {
-        // Get linux username from user_id if linux_users config exists
-        let linux_username = state
-            .linux_users
-            .as_ref()
-            .map(|lu| lu.linux_username(user_id))
-            .unwrap_or_else(|| user_id.to_string());
+        let linux_username = linux_username_override
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| {
+                state
+                    .linux_users
+                    .as_ref()
+                    .map(|lu| lu.linux_username(user_id))
+                    .unwrap_or_else(|| user_id.to_string())
+            });
 
         // Use for_user_with_pattern which handles both {user} and {uid} placeholders.
-        // Don't pre-check socket existence — the runner client retries on
+        // Don't pre-check socket existence -- the runner client retries on
         // transient connection failures during service restarts.
         match RunnerClient::for_user_with_pattern(&linux_username, pattern) {
             Ok(c) => return Some(c),
@@ -720,6 +736,23 @@ fn runner_client_for_user(state: &AppState, user_id: &str) -> Option<RunnerClien
     }
 
     None
+}
+
+/// Resolve the runner client for a given workspace path.
+///
+/// If the path is inside a shared workspace, returns a runner client for the
+/// shared workspace's Linux user. Otherwise returns the user's personal runner.
+async fn runner_client_for_path(
+    state: &AppState,
+    user_id: &str,
+    workspace_path: Option<&str>,
+) -> Option<RunnerClient> {
+    if let (Some(sw_service), Some(path)) = (state.shared_workspaces.as_ref(), workspace_path) {
+        if let Ok(Some(linux_user)) = sw_service.linux_user_for_path(path).await {
+            return runner_client_for_linux_user(state, user_id, Some(&linux_user));
+        }
+    }
+    runner_client_for_user(state, user_id)
 }
 
 /// State for a WebSocket connection, shared between command handler and event forwarder.
@@ -920,9 +953,13 @@ async fn handle_multiplexed_ws(socket: WebSocket, state: AppState, user_id: Stri
 }
 
 /// Check that a workspace path belongs to the requesting user.
-/// In multi-user mode, the workspace_path MUST be under the user's home directory.
+///
+/// In multi-user mode, the workspace_path must be either:
+/// 1. Under the user's home directory (personal workspace), OR
+/// 2. Under a shared workspace where the user is a member
+///
 /// Returns an error WsEvent if validation fails, None if OK.
-fn validate_workspace_path_for_user(
+async fn validate_workspace_path_for_user(
     workspace_path: Option<&str>,
     user_id: &str,
     state: &AppState,
@@ -945,24 +982,33 @@ fn validate_workspace_path_for_user(
     let canonical = match std::path::Path::new(path).canonicalize() {
         Ok(c) => c,
         Err(_) => {
-            // Path doesn't exist on disk — still check the string prefix
+            // Path doesn't exist on disk -- still check the string prefix
             std::path::PathBuf::from(path)
         }
     };
 
-    if !canonical.starts_with(&user_home) {
-        error!(
-            user_id = %user_id,
-            workspace_path = %path,
-            expected_prefix = %user_home,
-            "SECURITY: workspace path does not belong to user"
-        );
-        return Some(WsEvent::System(SystemWsEvent::Error {
-            error: "Access denied: workspace path does not belong to this user".to_string(),
-        }));
+    // Allow if path is under user's personal home
+    if canonical.starts_with(&user_home) {
+        return None;
     }
 
-    None
+    // Allow if path is inside a shared workspace where user is a member
+    if let Some(sw_service) = state.shared_workspaces.as_ref() {
+        let canonical_str = canonical.to_string_lossy();
+        if let Ok(Some(_)) = sw_service.check_access_for_path(&canonical_str, user_id).await {
+            return None; // User has access to this shared workspace
+        }
+    }
+
+    error!(
+        user_id = %user_id,
+        workspace_path = %path,
+        expected_prefix = %user_home,
+        "SECURITY: workspace path does not belong to user and is not a shared workspace"
+    );
+    Some(WsEvent::System(SystemWsEvent::Error {
+        error: "Access denied: workspace path does not belong to this user".to_string(),
+    }))
 }
 
 /// Handle a WebSocket command and return an optional response event.
@@ -977,7 +1023,7 @@ async fn handle_ws_command(
     {
         let (_, _, workspace_path) = ws_command_summary(&cmd);
         if let Some(err_event) =
-            validate_workspace_path_for_user(workspace_path.as_deref(), user_id, state)
+            validate_workspace_path_for_user(workspace_path.as_deref(), user_id, state).await
         {
             return Some(err_event);
         }
@@ -1456,14 +1502,49 @@ async fn handle_agent_command(
         CommandPayload::Prompt {
             message, client_id, ..
         } => {
+            // For shared workspaces, prepend the user's display name to the message
+            // so the agent knows which user is speaking.
+            let effective_message = if let Some(ref sw_service) = state.shared_workspaces {
+                let cwd = {
+                    let state_guard = conn_state.lock().await;
+                    state_guard
+                        .pi_session_meta
+                        .get(&session_id)
+                        .and_then(|m| m.cwd.as_ref())
+                        .map(|p| p.to_string_lossy().to_string())
+                };
+                if let Some(cwd) = cwd {
+                    // Look up user display name for the prefix
+                    let display_name = state
+                        .users
+                        .get_user(user_id)
+                        .await
+                        .ok()
+                        .flatten()
+                        .map(|u| u.display_name.clone())
+                        .unwrap_or_else(|| user_id.to_string());
+                    sw_service
+                        .prepend_user_name(&cwd, &display_name, &message)
+                        .await
+                        .unwrap_or_else(|_| message.clone())
+                } else {
+                    message.clone()
+                }
+            } else {
+                message.clone()
+            };
+
             info!(
                 "agent prompt: user={}, session_id={}, len={}, client_id={:?}",
                 user_id,
                 session_id,
-                message.len(),
+                effective_message.len(),
                 client_id
             );
-            match runner.pi_prompt(&session_id, &message, client_id).await {
+            match runner
+                .pi_prompt(&session_id, &effective_message, client_id)
+                .await
+            {
                 Ok(()) => None, // Streaming events are the response
                 Err(e) => Some(agent_response(
                     &session_id,

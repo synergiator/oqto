@@ -1,0 +1,226 @@
+//! Shared workspace API handlers.
+
+use axum::{
+    Json,
+    extract::{Path, State},
+};
+use tracing::info;
+
+use crate::auth::CurrentUser;
+use crate::shared_workspace::{
+    AddMemberRequest, CreateSharedWorkspaceRequest, SharedWorkspaceInfo,
+    SharedWorkspaceMemberInfo, UpdateMemberRequest, UpdateSharedWorkspaceRequest,
+};
+
+use crate::api::error::{ApiError, ApiResult};
+use crate::api::state::AppState;
+
+// ============================================================================
+// Shared workspace CRUD
+// ============================================================================
+
+/// Create a new shared workspace.
+pub async fn create_shared_workspace(
+    State(state): State<AppState>,
+    user: CurrentUser,
+    Json(request): Json<CreateSharedWorkspaceRequest>,
+) -> ApiResult<Json<serde_json::Value>> {
+    let service = state
+        .shared_workspaces
+        .as_ref()
+        .ok_or_else(|| ApiError::internal("shared workspaces not configured"))?;
+
+    let multi_user = state.linux_users.is_some();
+    let workspace = service
+        .create(&request, user.id(), multi_user)
+        .await
+        .map_err(|e| ApiError::bad_request(format!("failed to create shared workspace: {}", e)))?;
+
+    info!(
+        workspace_id = %workspace.id,
+        name = %workspace.name,
+        user = %user.id(),
+        "created shared workspace"
+    );
+
+    Ok(Json(serde_json::json!({
+        "id": workspace.id,
+        "name": workspace.name,
+        "slug": workspace.slug,
+        "path": workspace.path,
+        "created_at": workspace.created_at,
+    })))
+}
+
+/// List shared workspaces the current user has access to.
+pub async fn list_shared_workspaces(
+    State(state): State<AppState>,
+    user: CurrentUser,
+) -> ApiResult<Json<Vec<SharedWorkspaceInfo>>> {
+    let service = state
+        .shared_workspaces
+        .as_ref()
+        .ok_or_else(|| ApiError::internal("shared workspaces not configured"))?;
+
+    let workspaces = service
+        .list_for_user(user.id())
+        .await
+        .map_err(|e| ApiError::internal(format!("failed to list shared workspaces: {}", e)))?;
+
+    Ok(Json(workspaces))
+}
+
+/// Get a shared workspace by ID.
+pub async fn get_shared_workspace(
+    State(state): State<AppState>,
+    user: CurrentUser,
+    Path(workspace_id): Path<String>,
+) -> ApiResult<Json<serde_json::Value>> {
+    let service = state
+        .shared_workspaces
+        .as_ref()
+        .ok_or_else(|| ApiError::internal("shared workspaces not configured"))?;
+
+    let (ws, role) = service
+        .get(&workspace_id, user.id())
+        .await
+        .map_err(|e| ApiError::internal(format!("failed to get shared workspace: {}", e)))?
+        .ok_or_else(|| ApiError::not_found("shared workspace not found or access denied"))?;
+
+    Ok(Json(serde_json::json!({
+        "id": ws.id,
+        "name": ws.name,
+        "slug": ws.slug,
+        "path": ws.path,
+        "owner_id": ws.owner_id,
+        "description": ws.description,
+        "created_at": ws.created_at,
+        "updated_at": ws.updated_at,
+        "my_role": role.to_string(),
+    })))
+}
+
+/// Update a shared workspace.
+pub async fn update_shared_workspace(
+    State(state): State<AppState>,
+    user: CurrentUser,
+    Path(workspace_id): Path<String>,
+    Json(request): Json<UpdateSharedWorkspaceRequest>,
+) -> ApiResult<Json<serde_json::Value>> {
+    let service = state
+        .shared_workspaces
+        .as_ref()
+        .ok_or_else(|| ApiError::internal("shared workspaces not configured"))?;
+
+    let ws = service
+        .update(&workspace_id, user.id(), &request)
+        .await
+        .map_err(|e| ApiError::bad_request(format!("{}", e)))?;
+
+    Ok(Json(serde_json::json!({
+        "id": ws.id,
+        "name": ws.name,
+        "updated_at": ws.updated_at,
+    })))
+}
+
+/// Delete a shared workspace.
+pub async fn delete_shared_workspace(
+    State(state): State<AppState>,
+    user: CurrentUser,
+    Path(workspace_id): Path<String>,
+) -> ApiResult<Json<serde_json::Value>> {
+    let service = state
+        .shared_workspaces
+        .as_ref()
+        .ok_or_else(|| ApiError::internal("shared workspaces not configured"))?;
+
+    service
+        .delete(&workspace_id, user.id())
+        .await
+        .map_err(|e| ApiError::bad_request(format!("{}", e)))?;
+
+    Ok(Json(serde_json::json!({ "deleted": true })))
+}
+
+// ============================================================================
+// Member management
+// ============================================================================
+
+/// List members of a shared workspace.
+pub async fn list_shared_workspace_members(
+    State(state): State<AppState>,
+    user: CurrentUser,
+    Path(workspace_id): Path<String>,
+) -> ApiResult<Json<Vec<SharedWorkspaceMemberInfo>>> {
+    let service = state
+        .shared_workspaces
+        .as_ref()
+        .ok_or_else(|| ApiError::internal("shared workspaces not configured"))?;
+
+    let members = service
+        .list_members(&workspace_id, user.id())
+        .await
+        .map_err(|e| ApiError::internal(format!("failed to list members: {}", e)))?;
+
+    Ok(Json(members))
+}
+
+/// Add a member to a shared workspace.
+pub async fn add_shared_workspace_member(
+    State(state): State<AppState>,
+    user: CurrentUser,
+    Path(workspace_id): Path<String>,
+    Json(request): Json<AddMemberRequest>,
+) -> ApiResult<Json<serde_json::Value>> {
+    let service = state
+        .shared_workspaces
+        .as_ref()
+        .ok_or_else(|| ApiError::internal("shared workspaces not configured"))?;
+
+    service
+        .add_member(&workspace_id, user.id(), &request)
+        .await
+        .map_err(|e| ApiError::bad_request(format!("{}", e)))?;
+
+    Ok(Json(serde_json::json!({ "added": true })))
+}
+
+/// Update a member's role in a shared workspace.
+pub async fn update_shared_workspace_member(
+    State(state): State<AppState>,
+    user: CurrentUser,
+    Path((workspace_id, target_user_id)): Path<(String, String)>,
+    Json(request): Json<UpdateMemberRequest>,
+) -> ApiResult<Json<serde_json::Value>> {
+    let service = state
+        .shared_workspaces
+        .as_ref()
+        .ok_or_else(|| ApiError::internal("shared workspaces not configured"))?;
+
+    service
+        .update_member_role(&workspace_id, user.id(), &target_user_id, request.role)
+        .await
+        .map_err(|e| ApiError::bad_request(format!("{}", e)))?;
+
+    Ok(Json(serde_json::json!({ "updated": true })))
+}
+
+/// Remove a member from a shared workspace.
+pub async fn remove_shared_workspace_member(
+    State(state): State<AppState>,
+    user: CurrentUser,
+    Path((workspace_id, target_user_id)): Path<(String, String)>,
+) -> ApiResult<Json<serde_json::Value>> {
+    let service = state
+        .shared_workspaces
+        .as_ref()
+        .ok_or_else(|| ApiError::internal("shared workspaces not configured"))?;
+
+    service
+        .remove_member(&workspace_id, user.id(), &target_user_id)
+        .await
+        .map_err(|e| ApiError::bad_request(format!("{}", e)))?;
+
+    Ok(Json(serde_json::json!({ "removed": true })))
+}

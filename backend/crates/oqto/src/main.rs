@@ -53,6 +53,7 @@ mod runner;
 mod session;
 mod session_ui;
 mod settings;
+mod shared_workspace;
 mod templates;
 mod user;
 mod user_plane;

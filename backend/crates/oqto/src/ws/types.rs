@@ -260,6 +260,20 @@ pub enum WsEvent {
     #[serde(rename = "ui.theme")]
     UiTheme { theme: String },
 
+    // ========== Shared Workspace Events ==========
+    /// Shared workspace membership or metadata changed.
+    /// Sent to all connected members of the workspace.
+    #[serde(rename = "shared_workspace.updated")]
+    SharedWorkspaceUpdated {
+        workspace_id: String,
+        /// What changed: "member_added", "member_removed", "member_role_changed",
+        /// "workspace_updated", "workspace_deleted"
+        change: String,
+        /// Additional context about the change.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        detail: Option<Value>,
+    },
+
     // ========== Legacy Events ==========
     /// Legacy SSE event (deprecated).
     /// Contains the original event type and data.

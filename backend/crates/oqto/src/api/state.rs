@@ -25,6 +25,7 @@ use crate::onboarding::OnboardingService;
 use crate::session::SessionService;
 use crate::session_ui::SessionAutoAttachMode;
 use crate::settings::SettingsService;
+use crate::shared_workspace::SharedWorkspaceService;
 use crate::templates::OnboardingTemplatesService;
 use crate::user::UserService;
 use crate::ws::WsHub;
@@ -331,6 +332,8 @@ pub struct AppState {
     /// Default Pi model from config (e.g., "claude-sonnet-4-20250514"). Used as fallback
     /// when eavs is not configured.
     pub pi_default_model: Option<String>,
+    /// Shared workspace service for multi-user collaborative workspaces.
+    pub shared_workspaces: Option<Arc<SharedWorkspaceService>>,
     /// Path to a reference models.json to copy to new users when eavs is not configured.
     /// Typically the admin user's ~/.pi/agent/models.json.
     pub pi_models_template_path: Option<std::path::PathBuf>,
@@ -391,6 +394,7 @@ impl AppState {
             pi_default_provider: None,
             pi_default_model: None,
             pi_models_template_path: None,
+            shared_workspaces: None,
         }
     }
 
@@ -475,6 +479,12 @@ impl AppState {
     /// Set the EAVS client for LLM proxy integration.
     pub fn with_eavs_client(mut self, client: crate::eavs::EavsClient) -> Self {
         self.eavs_client = Some(Arc::new(client));
+        self
+    }
+
+    /// Set the shared workspace service.
+    pub fn with_shared_workspaces(mut self, service: SharedWorkspaceService) -> Self {
+        self.shared_workspaces = Some(Arc::new(service));
         self
     }
 

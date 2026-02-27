@@ -22,6 +22,7 @@ mod misc;
 mod projects;
 mod sessions;
 mod settings;
+mod shared_workspaces;
 pub mod trx;
 
 // Re-export all public types and handlers
@@ -84,6 +85,13 @@ pub use trx::{
 pub use misc::{
     codexbar_usage, features, fetch_feed, health, scheduler_delete, scheduler_overview,
     search_sessions, ws_debug,
+};
+
+// Shared workspace handlers
+pub use shared_workspaces::{
+    add_shared_workspace_member, create_shared_workspace, delete_shared_workspace,
+    get_shared_workspace, list_shared_workspace_members, list_shared_workspaces,
+    remove_shared_workspace_member, update_shared_workspace, update_shared_workspace_member,
 };
 
 // Internal helpers used by other modules
