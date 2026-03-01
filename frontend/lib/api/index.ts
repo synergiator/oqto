@@ -198,6 +198,26 @@ export {
 	reloadSettings,
 } from "./settings";
 
+// API keys
+export type { ApiKeyListItem, CreateApiKeyRequest, CreateApiKeyResponse } from "./api-keys";
+export { listApiKeys, createApiKey, revokeApiKey, deleteApiKey } from "./api-keys";
+
+// OAuth provider login
+export type {
+	OAuthProviderInfo,
+	OAuthProvidersResponse,
+	OAuthLoginResponse,
+	OAuthStatusResponse,
+	OAuthPollResponse,
+} from "./oauth";
+export {
+	listOAuthProviders,
+	startOAuthLogin,
+	submitOAuthCallback,
+	pollOAuthDevice,
+	deleteOAuthProvider,
+} from "./oauth";
+
 // Search
 export type {
 	HstryAgentFilter,

@@ -755,7 +755,7 @@ pub(crate) async fn sync_eavs_models_json(
 }
 
 /// Same as `sync_eavs_models_json` but with the key already in hand (avoids re-reading eavs.env).
-async fn sync_eavs_models_json_with_key(
+pub(crate) async fn sync_eavs_models_json_with_key(
     eavs_client: &crate::eavs::EavsClient,
     linux_users: &crate::local::LinuxUsersConfig,
     linux_username: &str,

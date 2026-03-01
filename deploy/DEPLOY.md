@@ -71,7 +71,7 @@ For each host (in order):
 
 **Local mode** (`mode = "local"`):
 - Single-user setup (dev machine)
-- Binaries installed via `sudo install` directly
+- Binaries installed to `/usr/local/bin` and symlinked into `~/.local/bin`
 - Frontend copied locally
 - Services restarted via `systemctl --user`
 

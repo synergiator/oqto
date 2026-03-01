@@ -1,0 +1,35 @@
+{
+  "todos": [
+    {
+      "id": "1",
+      "content": "Research SOTA secret management for AI agents (March 2026)",
+      "status": "in_progress",
+      "priority": "high"
+    },
+    {
+      "id": "2",
+      "content": "Search for agent-specific secret management patterns",
+      "status": "in_progress",
+      "priority": "high"
+    },
+    {
+      "id": "3",
+      "content": "Search for vault/HSM/TEE approaches for agent workflows",
+      "status": "pending",
+      "priority": "high"
+    },
+    {
+      "id": "4",
+      "content": "Search for ephemeral credential / just-in-time access patterns",
+      "status": "pending",
+      "priority": "high"
+    },
+    {
+      "id": "5",
+      "content": "Synthesize findings and recommendations for Oqto",
+      "status": "pending",
+      "priority": "high"
+    }
+  ],
+  "updated_at": "2026-03-01T12:20:04.807Z"
+}

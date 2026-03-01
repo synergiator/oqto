@@ -12,6 +12,7 @@ select_deployment_mode() {
   echo "    - Uses dev_mode authentication (no JWT secret required)"
   echo "    - Preconfigured dev users for easy login"
   echo "    - HTTP only (no TLS)"
+  echo "    - Insecure for public servers: dev users are guessable (e.g., dev:dev)"
   echo "    - Best for: local development, testing"
   echo
   echo -e "  ${BOLD}Production${NC} - For server deployments"
@@ -22,19 +23,19 @@ select_deployment_mode() {
   echo
 
   local choice
-  choice=$(prompt_choice "Select deployment mode:" "Development" "Production")
+  choice=$(prompt_choice "Select deployment mode:" "Production" "Development")
 
   case "$choice" in
-  "Development")
-    PRODUCTION_MODE="false"
-    OQTO_DEV_MODE="true"
-    log_info "Development mode selected"
-    ;;
   "Production")
     PRODUCTION_MODE="true"
     OQTO_DEV_MODE="false"
     log_info "Production mode selected"
     setup_production_mode
+    ;;
+  "Development")
+    PRODUCTION_MODE="false"
+    OQTO_DEV_MODE="true"
+    log_info "Development mode selected"
     ;;
   esac
 }
@@ -98,12 +99,15 @@ setup_caddy_prompt() {
 
   echo
   echo "Caddy provides a reverse proxy with automatic HTTPS."
-  echo "This is recommended for production deployments."
+  echo "Use this if you want a public HTTPS URL for your instance."
   echo
   echo "Features:"
   echo "  - Automatic TLS certificate from Let's Encrypt"
+  echo "  - HTTPS access via a domain you control (requires DNS)"
   echo "  - HTTP/2 support"
   echo "  - Simple configuration"
+  echo
+  echo "Without Caddy: access locally via http://<LAN-IP>:3000 or http://localhost:3000"
   echo
 
   if [[ -n "$OQTO_SETUP_CADDY" ]]; then
@@ -122,12 +126,15 @@ setup_caddy_prompt() {
 setup_caddy_config() {
   echo
   echo "Caddy requires a domain name for HTTPS certificates."
-  echo "The domain must point to this server's IP address."
+  echo "The domain must point to this server's IP address (configure DNS at your registrar)."
   echo
   echo "Examples:"
   echo "  - oqto.example.com"
   echo "  - agents.mycompany.io"
-  echo "  - localhost (for local testing without TLS)"
+  echo
+  echo "If you do not want HTTPS, skip Caddy and use:"
+  echo "  - http://<LAN-IP>:3000 (local network)"
+  echo "  - http://localhost:3000 (same machine)"
   echo
 
   if [[ -n "$OQTO_DOMAIN" ]]; then

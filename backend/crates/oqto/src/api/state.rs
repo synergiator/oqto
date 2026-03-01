@@ -17,6 +17,7 @@ use crate::local::UserSldrManager;
 
 use super::a2ui::PendingA2uiRequests;
 
+use crate::api_keys::ApiKeyRepository;
 use crate::auth::AuthState;
 use crate::invite::InviteCodeRepository;
 use crate::local::LinuxUsersConfig;
@@ -279,6 +280,8 @@ pub struct AppState {
     pub users: Arc<UserService>,
     /// Invite code repository for registration.
     pub invites: Arc<InviteCodeRepository>,
+    /// API key repository for external integrations.
+    pub api_keys: Arc<ApiKeyRepository>,
     /// Authentication state.
     pub auth: AuthState,
     /// HTTP client for proxying requests to per-session services.
@@ -326,6 +329,12 @@ pub struct AppState {
     pub eavs_client: Option<Arc<crate::eavs::EavsClient>>,
     /// Paths to eavs config files (for admin provider management).
     pub eavs_config: Option<EavsConfigPaths>,
+    /// Whether per-user EAVS OAuth logins are enabled.
+    pub eavs_oauth_enabled: bool,
+    /// Allowed OAuth providers (e.g., "anthropic", "openai-codex").
+    pub eavs_oauth_providers: Vec<String>,
+    /// Optional redirect URI used for OAuth flows (passed to EAVS).
+    pub eavs_oauth_redirect_uri: Option<String>,
     /// Default Pi provider from config (e.g., "anthropic"). Used as fallback when
     /// eavs is not configured and settings.json needs to be written for new users.
     pub pi_default_provider: Option<String>,
@@ -354,6 +363,7 @@ impl AppState {
         sessions: SessionService,
         users: UserService,
         invites: InviteCodeRepository,
+        api_keys: ApiKeyRepository,
         auth: AuthState,
         mmry: MmryState,
         voice: VoiceState,
@@ -368,6 +378,7 @@ impl AppState {
             sessions: Arc::new(sessions),
             users: Arc::new(users),
             invites: Arc::new(invites),
+            api_keys: Arc::new(api_keys),
             auth,
             http_client,
             mmry,
@@ -391,6 +402,9 @@ impl AppState {
             feedback: crate::feedback::FeedbackConfig::default(),
             eavs_client: None,
             eavs_config: None,
+            eavs_oauth_enabled: false,
+            eavs_oauth_providers: Vec::new(),
+            eavs_oauth_redirect_uri: None,
             pi_default_provider: None,
             pi_default_model: None,
             pi_models_template_path: None,
@@ -400,6 +414,18 @@ impl AppState {
 
     pub fn with_eavs_config(mut self, paths: EavsConfigPaths) -> Self {
         self.eavs_config = Some(paths);
+        self
+    }
+
+    pub fn with_eavs_oauth_config(
+        mut self,
+        enabled: bool,
+        providers: Vec<String>,
+        redirect_uri: Option<String>,
+    ) -> Self {
+        self.eavs_oauth_enabled = enabled;
+        self.eavs_oauth_providers = providers;
+        self.eavs_oauth_redirect_uri = redirect_uri;
         self
     }
 

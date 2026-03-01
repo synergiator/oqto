@@ -1,0 +1,29 @@
+{
+  "todos": [
+    {
+      "id": "9975db93",
+      "content": "Inspect oqto-website build pipeline and setup schema sources in oqto repo",
+      "status": "completed",
+      "priority": "high"
+    },
+    {
+      "id": "701a7999",
+      "content": "Add schema sync/generator scripts and update oqto-website build to consume schema",
+      "status": "completed",
+      "priority": "high"
+    },
+    {
+      "id": "93e4bbd8",
+      "content": "Add CI/check or justfile task to enforce schema sync",
+      "status": "completed",
+      "priority": "medium"
+    },
+    {
+      "id": "be7dce7f",
+      "content": "Document website schema sync workflow",
+      "status": "completed",
+      "priority": "medium"
+    }
+  ],
+  "updated_at": "2026-03-01T10:47:29.490Z"
+}

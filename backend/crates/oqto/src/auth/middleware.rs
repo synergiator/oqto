@@ -12,6 +12,8 @@ use chrono::Utc;
 use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode};
 use log::{debug, warn};
 
+use crate::api_keys::{ApiKeyRepository, hash_api_key, is_api_key, parse_timestamp};
+
 use super::{AuthConfig, AuthError, Claims, DevUser, Role};
 
 /// Extract a Bearer token from an Authorization header value.
@@ -51,6 +53,13 @@ fn token_from_cookie_header<'a>(cookie_header: &'a str, cookie_name: &str) -> Op
 pub struct AuthState {
     config: Arc<AuthConfig>,
     decoding_key: Option<DecodingKey>,
+}
+
+/// State passed to the authentication middleware.
+#[derive(Clone)]
+pub struct AuthMiddlewareState {
+    pub auth: AuthState,
+    pub api_keys: Option<ApiKeyRepository>,
 }
 
 impl AuthState {
@@ -266,7 +275,7 @@ where
 /// 3. token query parameter (for WebSocket connections)
 /// 4. X-Dev-User header (dev mode only)
 pub async fn auth_middleware(
-    State(auth): State<AuthState>,
+    State(state): State<AuthMiddlewareState>,
     mut req: axum::http::Request<axum::body::Body>,
     next: Next,
 ) -> Result<Response, AuthError> {
@@ -301,17 +310,46 @@ pub async fn auth_middleware(
         None
     };
 
+    let query_api_key = if is_websocket_auth_path(&req) {
+        req.uri().query().and_then(|q| {
+            q.split('&').find_map(|pair| {
+                let (key, value) = pair.split_once('=')?;
+
+                if key == "api_key" {
+                    urlencoding::decode(value).ok().map(|s| s.into_owned())
+                } else {
+                    None
+                }
+            })
+        })
+    } else {
+        None
+    };
+
+    let api_key_header = req
+        .headers()
+        .get("X-API-Key")
+        .and_then(|h| h.to_str().ok())
+        .map(|s| s.to_string());
+
     let claims = if let Some(header) = auth_header {
         // Parse Bearer token
         let token = bearer_token_from_header(header)?;
 
-        // Validate token
-        auth.validate_token(token)?
+        if is_api_key(token) {
+            api_key_to_claims(&state, token).await?
+        } else {
+            state.auth.validate_token(token)?
+        }
+    } else if let Some(api_key) = api_key_header.as_deref() {
+        api_key_to_claims(&state, api_key).await?
     } else if let Some(token) = cookie_token {
-        auth.validate_token(token)?
+        state.auth.validate_token(token)?
     } else if let Some(ref token) = query_token {
-        auth.validate_token(token)?
-    } else if auth.is_dev_mode() {
+        state.auth.validate_token(token)?
+    } else if let Some(ref api_key) = query_api_key {
+        api_key_to_claims(&state, api_key).await?
+    } else if state.auth.is_dev_mode() {
         // In dev mode, allow X-Dev-User header
         if let Some(user_id) = req
             .headers()
@@ -319,7 +357,7 @@ pub async fn auth_middleware(
             .and_then(|h| h.to_str().ok())
         {
             debug!("Using dev user: {}", user_id);
-            auth.validate_token(&format!("dev:{}", user_id))?
+            state.auth.validate_token(&format!("dev:{}", user_id))?
         } else {
             return Err(AuthError::MissingAuthHeader);
         }
@@ -332,6 +370,55 @@ pub async fn auth_middleware(
     req.extensions_mut().insert(user);
 
     Ok(next.run(req).await)
+}
+
+async fn api_key_to_claims(
+    state: &AuthMiddlewareState,
+    raw_key: &str,
+) -> Result<Claims, AuthError> {
+    let repo = state.api_keys.as_ref().ok_or_else(|| {
+        AuthError::InvalidToken("api key authentication not configured".to_string())
+    })?;
+
+    let key_hash = hash_api_key(raw_key);
+    let auth_user = repo
+        .find_auth_user_by_hash(&key_hash)
+        .await
+        .map_err(|err| AuthError::Internal(err.to_string()))?
+        .ok_or_else(|| AuthError::InvalidToken("api key not found".to_string()))?;
+
+    let now = chrono::Utc::now();
+    let exp = auth_user
+        .expires_at
+        .as_deref()
+        .and_then(parse_timestamp)
+        .map(|dt| dt.timestamp())
+        .unwrap_or_else(|| now.timestamp() + 3600 * 24);
+
+    if exp <= now.timestamp() {
+        return Err(AuthError::TokenExpired);
+    }
+
+    if let Err(err) = repo.touch_last_used(&auth_user.key_id).await {
+        warn!("Failed to update api key last_used_at: {}", err);
+    }
+
+    let role = auth_user.role.parse::<Role>().unwrap_or(Role::User);
+
+    Ok(Claims {
+        sub: auth_user.user_id.clone(),
+        iss: Some("api_key".to_string()),
+        aud: None,
+        exp,
+        iat: Some(now.timestamp()),
+        nbf: None,
+        jti: None,
+        email: Some(auth_user.email.clone()),
+        name: Some(auth_user.display_name.clone()),
+        preferred_username: Some(auth_user.user_id.clone()),
+        roles: vec![role.to_string()],
+        role: Some(role.to_string()),
+    })
 }
 
 /// Check if this is a WebSocket path that supports query parameter authentication.

@@ -218,6 +218,8 @@ deploy_host() {
             if [[ "$is_local" == "true" ]]; then
                 log "  Installing $bin -> /usr/local/bin/$bin"
                 run sudo install -m 0755 "$bin_path" "/usr/local/bin/$bin"
+                run mkdir -p "${HOME}/.local/bin"
+                run ln -sf "/usr/local/bin/$bin" "${HOME}/.local/bin/$bin"
             else
                 log "  Uploading $bin -> $ssh_target:/usr/local/bin/$bin"
                 if $DRY_RUN; then

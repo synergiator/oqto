@@ -1,5 +1,21 @@
 # Changes
 
+- 2026-03-01: Add setup schema plus website sync/check scripts to keep oqto-website config wizard in sync via JSON schema.
+- 2026-03-01: Add pre-commit hook and scripts to refresh dependencies.toml, including GitHub release checks for binary availability.
+- 2026-03-01: Add optional EAVS OAuth provider logins with admin-configured providers and per-user connect/disconnect support.
+- 2026-02-28: Install local deployments into /usr/local/bin and refresh ~/.local/bin symlinks to prevent binary path mismatches.
+- 2026-02-28: Add API key delete endpoint and Settings UI delete action while keeping revoke for omni keys.
+- 2026-02-28: Generate API keys without consecutive hyphens for cleaner tokens.
+- 2026-02-28: Fix API key SQL queries by removing line continuation escapes that broke SQLite parsing.
+- 2026-02-28: Always fix runner socket dir ownership before the user runner fast path so multi-user sockets stay accessible.
+- 2026-03-01: Default setup to production auth (dev_mode off) unless --dev or OQTO_DEV_MODE=true is explicitly set.
+- 2026-03-01: Add dev mode disclaimer in setup prompts and example config.
+- 2026-03-01: Generate a random dev password when none is provided and show it once in the setup summary.
+- 2026-03-01: Default setup selections to production, multi-user, and container modes with clearer explanations.
+- 2026-03-01: Clarify Caddy vs local network access in setup prompts.
+- 2026-02-26: Add API key management with omni deep-link/QR generation in Settings and backend key auth endpoints.
+- 2026-02-26: Pause chat auto-scroll on manual scroll in minimal verbosity mode by treating scrollbar/keyboard scrolls as user-initiated while ignoring programmatic scroll updates.
+- 2026-02-26: Fetch chat history messages from hstry without the in-memory cache to prevent missing messages after reloads.
 - 2026-02-13: Clear workspace overview selection and reuse overview path when creating new chats so the UI switches correctly.
 - 2026-02-13: Treat missing Pi sessions as empty command lists in the WebSocket manager to avoid session-switch errors.
 - 2026-02-12: Add oqto-browserd Playwright daemon with full feature parity to agent-browser. Includes: all ~120 commands (click, fill, type, press, check, uncheck, upload, dblclick, focus, drag, hover, select, tap, clear, scroll, frame/mainframe switching, tab/window management, cookies/localStorage/sessionStorage, dialog handling, route/unroute network interception, request tracking, download, geolocation, permissions, device emulation, viewport, screenshot, PDF, evaluate/evalhandle, content/setContent, console/error logs, keyboard/mouse/wheel/clipboard, addScript/addStyle/addInitScript, tracing, HAR, video recording, screencast start/stop, CDP input injection for mouse/keyboard/touch). Enhanced snapshot with refs (role/text/label/placeholder/alttext/title/testid/nth selectors), cursor-interactive element detection, compact/interactive/depth filtering. AI-friendly error messages. Origin-validated WebSocket stream server. Session-scoped socket dirs with 0700 permissions.

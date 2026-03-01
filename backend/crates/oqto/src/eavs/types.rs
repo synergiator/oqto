@@ -306,6 +306,35 @@ pub struct ProviderModelCost {
     pub cache_read: f64,
 }
 
+/// OAuth login response from EAVS.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct OAuthLoginResponse {
+    pub auth_url: Option<String>,
+    pub instructions: String,
+    pub verification_uri: Option<String>,
+    pub user_code: Option<String>,
+    pub device_code: Option<String>,
+    pub interval: Option<u64>,
+    pub expires_in: Option<u64>,
+    pub state: Option<String>,
+    pub code_verifier: Option<String>,
+}
+
+/// OAuth status response from EAVS.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct OAuthStatusResponse {
+    pub status: String,
+    pub provider: String,
+    pub user_id: String,
+}
+
+/// OAuth poll response from EAVS.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct OAuthPollResponse {
+    pub status: String,
+    pub interval: Option<u64>,
+}
+
 /// Error response from EAVS API.
 #[derive(Debug, Clone, Deserialize)]
 pub struct ApiErrorResponse {

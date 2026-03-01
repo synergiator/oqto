@@ -66,7 +66,10 @@ fn create_router_with_config_and_auth(
         .on_response(DefaultOnResponse::new().level(Level::DEBUG));
 
     // Clone auth state for middleware
-    let auth_state = state.auth.clone();
+    let auth_state = crate::auth::AuthMiddlewareState {
+        auth: state.auth.clone(),
+        api_keys: Some(state.api_keys.as_ref().clone()),
+    };
 
     // Protected routes (require authentication)
     let protected_routes = Router::new()
@@ -210,6 +213,19 @@ fn create_router_with_config_and_auth(
         .route("/me", get(handlers::get_me))
         .route("/me", put(handlers::update_me))
         .route("/auth/change-password", post(handlers::change_password))
+        // API keys
+        .route(
+            "/keys",
+            get(handlers::list_api_keys).post(handlers::create_api_key),
+        )
+        .route("/keys/{key_id}", delete(handlers::delete_api_key))
+        .route("/keys/{key_id}/revoke", delete(handlers::revoke_api_key))
+        // OAuth provider login (per-user)
+        .route("/oauth/providers", get(handlers::oauth_providers))
+        .route("/oauth/login/{provider}", post(handlers::oauth_login))
+        .route("/oauth/callback", post(handlers::oauth_callback))
+        .route("/oauth/poll/{provider}", post(handlers::oauth_poll))
+        .route("/oauth/{provider}", delete(handlers::oauth_delete))
         // UI control routes (agent-driven UI control)
         .route("/ui/navigate", post(ui_control_handlers::navigate))
         .route("/ui/session", post(ui_control_handlers::session))
@@ -472,7 +488,7 @@ fn create_router_with_config_and_auth(
 fn apply_auth_layers(
     router: Router,
     state: AppState,
-    auth_state: crate::auth::AuthState,
+    auth_state: crate::auth::AuthMiddlewareState,
     auth_mode: AuthMode,
 ) -> Router {
     let router = router.layer(middleware::from_fn_with_state(

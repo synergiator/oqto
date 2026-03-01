@@ -430,7 +430,12 @@ print_summary() {
     if [[ "$OQTO_DEV_MODE" == "true" && -n "${dev_user_id:-}" ]]; then
       echo "  $step. Login with your dev credentials:"
       echo "     Username: $dev_user_id"
-      echo "     Password: (the password you entered)"
+      if [[ "$dev_user_password_generated" == "true" && -n "${dev_user_password_plain:-}" ]]; then
+        echo "     Password: $dev_user_password_plain"
+        echo "     Note: This password is shown only once. Store it securely."
+      else
+        echo "     Password: (the password you entered)"
+      fi
       echo
       ((step++))
     fi

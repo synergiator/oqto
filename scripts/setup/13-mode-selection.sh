@@ -8,15 +8,15 @@ select_user_mode() {
   echo
   echo "Oqto supports two user modes:"
   echo
+  echo -e "  ${BOLD}Multi-user${NC} - Team deployment (default)"
+  echo "    - Each user gets an isolated workspace"
+  echo "    - User authentication and management"
+  echo "    - Best for: teams, shared servers"
+  echo
   echo -e "  ${BOLD}Single-user${NC} - Personal deployment"
   echo "    - All sessions use the same workspace"
   echo "    - Simpler setup, no user management"
   echo "    - Best for: personal laptops, single-developer servers"
-  echo
-  echo -e "  ${BOLD}Multi-user${NC} - Team deployment"
-  echo "    - Each user gets isolated workspace"
-  echo "    - User authentication and management"
-  echo "    - Best for: teams, shared servers"
 
   if [[ "$OS" == "macos" ]]; then
     echo
@@ -24,7 +24,7 @@ select_user_mode() {
   fi
 
   local choice
-  choice=$(prompt_choice "Select user mode:" "Single-user" "Multi-user")
+  choice=$(prompt_choice "Select user mode:" "Multi-user" "Single-user")
 
   case "$choice" in
   "Single-user")
@@ -55,18 +55,18 @@ select_backend_mode() {
   echo
   echo "Oqto can run agents in two modes:"
   echo
+  echo -e "  ${BOLD}Container${NC} - Docker/Podman containers (default)"
+  echo "    - Full isolation per session"
+  echo "    - Reproducible environment"
+  echo "    - Best for: multi-user, production, untrusted code"
+  echo
   echo -e "  ${BOLD}Local${NC} - Native processes"
   echo "    - Runs Pi, oqto-files, ttyd directly on host"
   echo "    - Lower overhead, faster startup"
   echo "    - Best for: development, single-user, trusted environments"
-  echo
-  echo -e "  ${BOLD}Container${NC} - Docker/Podman containers"
-  echo "    - Full isolation per session"
-  echo "    - Reproducible environment"
-  echo "    - Best for: multi-user, production, untrusted code"
 
   local choice
-  choice=$(prompt_choice "Select backend mode:" "Local" "Container")
+  choice=$(prompt_choice "Select backend mode:" "Container" "Local")
 
   case "$choice" in
   "Local")

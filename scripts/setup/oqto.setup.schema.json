@@ -1,0 +1,184 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/byteowlz/schemas/oqto/oqto.setup.schema.json",
+  "title": "Oqto setup configuration",
+  "description": "Configuration schema for oqto.setup.toml",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema reference for editor support"
+    },
+    "deployment": {
+      "type": "object",
+      "description": "Deployment configuration",
+      "properties": {
+        "user_mode": {
+          "type": "string",
+          "enum": ["single", "multi"],
+          "description": "User mode for deployment"
+        },
+        "backend_mode": {
+          "type": "string",
+          "enum": ["container", "local"],
+          "description": "Backend runtime mode"
+        },
+        "container_runtime": {
+          "type": "string",
+          "enum": ["docker", "podman"],
+          "description": "Container runtime when backend_mode=container"
+        },
+        "workspace_dir": {
+          "type": "string",
+          "description": "Workspace directory for local mode"
+        }
+      },
+      "additionalProperties": false
+    },
+    "network": {
+      "type": "object",
+      "description": "Network configuration",
+      "properties": {
+        "log_level": {
+          "type": "string",
+          "enum": ["error", "warn", "info", "debug", "trace"],
+          "description": "Log level"
+        },
+        "caddy": {
+          "type": "boolean",
+          "description": "Enable Caddy reverse proxy"
+        },
+        "domain": {
+          "type": "string",
+          "description": "Primary domain for production deployments"
+        }
+      },
+      "additionalProperties": false
+    },
+    "admin": {
+      "type": "object",
+      "description": "Admin user configuration",
+      "properties": {
+        "username": {
+          "type": "string",
+          "description": "Admin username"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Admin email"
+        }
+      },
+      "additionalProperties": false
+    },
+    "providers": {
+      "type": "object",
+      "description": "Provider configuration",
+      "properties": {
+        "enabled": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Enabled providers"
+        }
+      },
+      "patternProperties": {
+        "^[a-z0-9_-]+$": {
+          "type": "object",
+          "description": "Custom provider configuration",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "openai",
+                "openai-responses",
+                "openai-compatible",
+                "anthropic",
+                "azure",
+                "bedrock",
+                "google-vertex"
+              ]
+            },
+            "base_url": {
+              "type": "string"
+            },
+            "api_key": {
+              "type": "string"
+            },
+            "deployment": {
+              "type": "string"
+            },
+            "api_version": {
+              "type": "string"
+            },
+            "aws_region": {
+              "type": "string"
+            },
+            "gcp_project": {
+              "type": "string"
+            },
+            "gcp_location": {
+              "type": "string"
+            },
+            "test_model": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "tools": {
+      "type": "object",
+      "description": "Tool installation configuration",
+      "properties": {
+        "install_all": {
+          "type": "boolean"
+        },
+        "enabled": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "searxng": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "hardening": {
+      "type": "object",
+      "description": "Security hardening configuration",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "ssh_port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "firewall": {
+          "type": "boolean"
+        },
+        "fail2ban": {
+          "type": "boolean"
+        },
+        "ssh_hardening": {
+          "type": "boolean"
+        },
+        "auto_updates": {
+          "type": "boolean"
+        },
+        "kernel_security": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

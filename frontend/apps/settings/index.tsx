@@ -2,6 +2,7 @@
 
 import { SettingsEditor } from "@/components/settings";
 import { Button } from "@/components/ui/button";
+import { ApiKeysPanel } from "@/apps/settings/ApiKeysPanel";
 import { useApp } from "@/hooks/use-app";
 import { changePassword } from "@/lib/api/auth";
 import { cn } from "@/lib/utils";
@@ -10,6 +11,7 @@ import {
 	HelpCircle,
 	Info,
 	Keyboard,
+	Key,
 	PanelLeftClose,
 	PanelRightClose,
 	Settings,
@@ -235,10 +237,12 @@ export function SettingsApp() {
 	const { locale, setActiveAppId } = useApp();
 	const { t } = useTranslation();
 	const navigate = useNavigate();
-	const [mainTab, setMainTab] = useState<"oqto" | "mmry" | "account">("oqto");
+	const [mainTab, setMainTab] = useState<
+		"oqto" | "mmry" | "account" | "api-keys"
+	>("oqto");
 	const [sidebarTab, setSidebarTab] = useState<"help" | "shortcuts">("help");
 	const [mobileView, setMobileView] = useState<
-		"oqto" | "mmry" | "account" | "help" | "shortcuts"
+		"oqto" | "mmry" | "account" | "api-keys" | "help" | "shortcuts"
 	>("oqto");
 	const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState(false);
 
@@ -282,6 +286,15 @@ export function SettingsApp() {
 							}}
 							icon={User}
 							label={t("settings.accountTab")}
+						/>
+						<TabButton
+							active={mobileView === "api-keys"}
+							onClick={() => {
+								setMobileView("api-keys");
+								setMainTab("api-keys");
+							}}
+							icon={Key}
+							label={t("settings.apiKeysTab", "API Keys")}
 						/>
 						<TabButton
 							active={mobileView === "help"}
@@ -328,6 +341,11 @@ export function SettingsApp() {
 						{mobileView === "account" && (
 							<div className="sm:max-w-3xl sm:mx-auto">
 								<AccountPanel locale={locale} />
+							</div>
+						)}
+						{mobileView === "api-keys" && (
+							<div className="sm:max-w-3xl sm:mx-auto">
+								<ApiKeysPanel />
 							</div>
 						)}
 						{mobileView === "help" && <SettingsHelpPanel locale={locale} />}
@@ -396,6 +414,12 @@ export function SettingsApp() {
 							icon={User}
 							label={t("settings.accountTab")}
 						/>
+						<TabButton
+							active={mainTab === "api-keys"}
+							onClick={() => setMainTab("api-keys")}
+							icon={Key}
+							label={t("settings.apiKeysTab", "API Keys")}
+						/>
 					</div>
 
 					<div className="flex-1 min-h-0 overflow-y-auto scrollbar-hide mt-4">
@@ -412,6 +436,11 @@ export function SettingsApp() {
 						{mainTab === "account" && (
 							<div className="max-w-3xl">
 								<AccountPanel locale={locale} />
+							</div>
+						)}
+						{mainTab === "api-keys" && (
+							<div className="max-w-3xl">
+								<ApiKeysPanel />
 							</div>
 						)}
 					</div>

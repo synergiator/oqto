@@ -41,13 +41,9 @@ install_service_linux() {
     local service_dir="$HOME/.config/systemd/user"
     mkdir -p "$service_dir"
 
-    # Determine binary paths (prefer local install, fall back to system)
+    # Determine binary paths (system-wide install)
     local oqto_bin="/usr/local/bin/oqto"
     local oqto_runner_bin="/usr/local/bin/oqto-runner"
-    [[ -x "$HOME/.local/bin/oqto" ]] && oqto_bin="$HOME/.local/bin/oqto"
-    [[ -x "$HOME/.local/bin/oqto-runner" ]] && oqto_runner_bin="$HOME/.local/bin/oqto-runner"
-    [[ -x "$HOME/.cargo/bin/oqto" ]] && oqto_bin="$HOME/.cargo/bin/oqto"
-    [[ -x "$HOME/.cargo/bin/oqto-runner" ]] && oqto_runner_bin="$HOME/.cargo/bin/oqto-runner"
 
     # 1. hstry service (chat history)
     local hstry_bin="/usr/local/bin/hstry"

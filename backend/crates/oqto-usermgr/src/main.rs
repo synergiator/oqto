@@ -679,8 +679,39 @@ fn cmd_setup_user_runner(args: &serde_json::Value) -> Response {
         return Response::error(format!("runner binary not found: {RUNNER_BINARY}"));
     }
 
+    let group = "oqto";
+
     // Derive the socket path from the validated username (never from client input)
     let socket_path = format!("/run/oqto/runner-sockets/{username}/oqto-runner.sock");
+
+    // Ensure socket directory permissions before the fast path check so ownership regressions
+    // are corrected even when the runner is already running.
+    if let Err(e) = fix_socket_base_dirs() {
+        return Response::error(format!("fixing base socket dirs: {e}"));
+    }
+    let socket_dir = format!("/run/oqto/runner-sockets/{username}");
+    if let Err(e) = run_cmd("/bin/mkdir", &["-p", &socket_dir]) {
+        return Response::error(format!("mkdir {socket_dir}: {e}"));
+    }
+    if let Err(e) = run_cmd(
+        "/usr/bin/chown",
+        &[&format!("{username}:{group}"), &socket_dir],
+    ) {
+        return Response::error(format!("chown {socket_dir}: {e}"));
+    }
+    if let Err(e) = run_cmd("/usr/bin/chmod", &["2770", &socket_dir]) {
+        return Response::error(format!("chmod {socket_dir}: {e}"));
+    }
+    if let Ok(entries) = std::fs::read_dir(&socket_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            let path_str = path.to_string_lossy();
+            let _ = run_cmd(
+                "/usr/bin/chown",
+                &[&format!("{username}:{group}"), &path_str],
+            );
+        }
+    }
 
     // Fast path: if runner socket exists and is connectable, skip the full setup.
     // This avoids expensive daemon-reload + restart on every login when the runner
@@ -717,8 +748,6 @@ fn cmd_setup_user_runner(args: &serde_json::Value) -> Response {
             "unexpected home directory for {username}: {home} (expected /home/oqto_*)"
         ));
     }
-
-    let group = "oqto";
 
     // Construct a PATH that includes the user's local bin dirs and system paths.
     // Systemd user services run with a minimal environment, so tools like bun/node

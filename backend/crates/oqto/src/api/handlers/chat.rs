@@ -813,7 +813,7 @@ pub async fn get_chat_messages(
         if query.render {
             crate::history::get_session_messages_rendered_via_grpc(hstry, &session_id).await
         } else {
-            crate::history::get_session_messages_via_grpc_cached(hstry, &session_id).await
+            crate::history::repository::get_session_messages_via_grpc(hstry, &session_id).await
         }
     } else {
         Err(anyhow::anyhow!("hstry not configured"))

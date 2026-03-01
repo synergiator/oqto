@@ -167,10 +167,19 @@ default_session_budget_usd = 10.0
 # Default session rate limit in requests per minute (optional)
 default_session_rpm = 60
 
+[eavs.oauth]
+# Enable per-user OAuth logins (Anthropic, OpenAI Codex, etc.).
+enabled = false
+# Allowed OAuth providers (e.g., "anthropic", "openai-codex").
+providers = ["anthropic", "openai-codex"]
+# Redirect URI used for OAuth flows (required for OpenAI Codex).
+# redirect_uri = "https://oqto.example.com/oauth/callback"
+
 [auth]
 # Enable development mode (uses dev_users for authentication, relaxed security)
+# WARNING: Insecure for public deployments. Dev users are easy to guess.
 # Set to false for production deployments
-dev_mode = true
+dev_mode = false
 
 # JWT secret for signing tokens (REQUIRED when dev_mode = false)
 # Must be at least 32 characters. Generate with: openssl rand -base64 48

@@ -401,6 +401,36 @@ update-deps:
     echo ""
     echo "Done: dependencies.toml updated"
 
+# Install git hooks (uses .githooks)
+install-hooks:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    ROOT="$(pwd)"
+
+    if [[ ! -d "$ROOT/.githooks" ]]; then
+      echo "No .githooks directory found"
+      exit 1
+    fi
+
+    chmod +x "$ROOT/.githooks/pre-commit"
+    git config core.hooksPath .githooks
+    echo "Git hooks installed"
+
+# Sync schema artifacts to oqto-website
+sync-website-schemas:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    ./scripts/sync-oqto-website.sh
+
+# Check whether oqto-website schema artifacts are in sync
+check-website-schemas:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    ./scripts/check-oqto-website.sh
+
 # Check for updates to external dependencies
 check-updates:
     #!/usr/bin/env bash

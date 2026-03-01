@@ -125,6 +125,111 @@ impl EavsClient {
         self.handle_response(response).await
     }
 
+    /// Start an OAuth login flow for a provider.
+    pub async fn oauth_login(
+        &self,
+        provider: &str,
+        user_id: &str,
+        redirect_uri: Option<&str>,
+    ) -> EavsResult<OAuthLoginResponse> {
+        #[derive(serde::Serialize)]
+        struct OAuthLoginRequest<'a> {
+            user_id: &'a str,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            redirect_uri: Option<&'a str>,
+        }
+
+        let url = format!("{}/auth/login/{}", self.base_url, provider);
+        let response = self
+            .client
+            .post(&url)
+            .json(&OAuthLoginRequest {
+                user_id,
+                redirect_uri,
+            })
+            .send()
+            .await?;
+        self.handle_response(response).await
+    }
+
+    /// Complete OAuth flow with a callback code + state.
+    pub async fn oauth_callback(
+        &self,
+        code: &str,
+        state: &str,
+        redirect_uri: Option<&str>,
+    ) -> EavsResult<OAuthStatusResponse> {
+        #[derive(serde::Serialize)]
+        struct OAuthCallbackRequest<'a> {
+            code: &'a str,
+            state: &'a str,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            redirect_uri: Option<&'a str>,
+        }
+
+        let url = format!("{}/auth/callback", self.base_url);
+        let response = self
+            .client
+            .post(&url)
+            .json(&OAuthCallbackRequest {
+                code,
+                state,
+                redirect_uri,
+            })
+            .send()
+            .await?;
+        self.handle_response(response).await
+    }
+
+    /// Poll device-code OAuth flow (GitHub Copilot).
+    pub async fn oauth_poll(
+        &self,
+        provider: &str,
+        user_id: &str,
+        device_code: &str,
+    ) -> EavsResult<OAuthPollResponse> {
+        #[derive(serde::Serialize)]
+        struct OAuthPollRequest<'a> {
+            user_id: &'a str,
+            device_code: &'a str,
+        }
+
+        let url = format!("{}/auth/poll/{}", self.base_url, provider);
+        let response = self
+            .client
+            .post(&url)
+            .json(&OAuthPollRequest { user_id, device_code })
+            .send()
+            .await?;
+        self.handle_response(response).await
+    }
+
+    /// Get OAuth providers connected for a user.
+    pub async fn oauth_status(&self, user_id: &str) -> EavsResult<Vec<String>> {
+        let url = format!("{}/auth/status/{}", self.base_url, user_id);
+        let response = self.client.get(&url).send().await?;
+        self.handle_response(response).await
+    }
+
+    /// Delete OAuth credentials for a user/provider.
+    pub async fn oauth_delete(&self, user_id: &str, provider: &str) -> EavsResult<bool> {
+        let url = format!("{}/auth/{}/{}", self.base_url, user_id, provider);
+        let response = self.client.delete(&url).send().await?;
+        match response.status() {
+            StatusCode::NO_CONTENT => Ok(true),
+            StatusCode::NOT_FOUND => Ok(false),
+            _ => {
+                let error: ApiErrorResponse = response.json().await.map_err(|e| {
+                    EavsError::ParseError(format!("Failed to parse error response: {}", e))
+                })?;
+                Err(EavsError::ApiError {
+                    message: error.error,
+                    code: error.code,
+                })
+            }
+        }
+    }
+
     /// Get the base URL (for constructing provider-prefixed URLs).
     pub fn base_url(&self) -> &str {
         &self.base_url

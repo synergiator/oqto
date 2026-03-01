@@ -375,6 +375,31 @@
           "description": "Default session rate limit in requests per minute",
           "minimum": 1,
           "examples": [60, 120]
+        },
+        "oauth": {
+          "type": "object",
+          "description": "Per-user OAuth login configuration for EAVS providers",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable per-user OAuth logins (Anthropic, OpenAI Codex, etc.)",
+              "default": false
+            },
+            "providers": {
+              "type": "array",
+              "description": "Allowed OAuth providers (e.g., anthropic, openai-codex)",
+              "items": {
+                "type": "string"
+              },
+              "default": []
+            },
+            "redirect_uri": {
+              "type": "string",
+              "description": "Redirect URI used for OAuth flows (required for OpenAI Codex)",
+              "examples": ["https://oqto.example.com/oauth/callback"]
+            }
+          },
+          "additionalProperties": false
         }
       },
       "additionalProperties": false
@@ -388,7 +413,7 @@
         "dev_mode": {
           "type": "boolean",
           "description": "Enable development mode (uses dev_users for authentication, relaxed security). Set to false for production deployments.",
-          "default": true
+          "default": false
         },
         "jwt_secret": {
           "type": "string",

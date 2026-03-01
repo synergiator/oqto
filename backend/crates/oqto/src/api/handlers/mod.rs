@@ -15,10 +15,12 @@
 
 mod admin;
 mod auth;
+mod api_keys;
 mod chat;
 mod feedback;
 mod invites;
 mod misc;
+mod oauth;
 mod projects;
 mod sessions;
 mod settings;
@@ -26,6 +28,9 @@ mod shared_workspaces;
 pub mod trx;
 
 // Re-export all public types and handlers
+
+// API key handlers
+pub use api_keys::{create_api_key, delete_api_key, list_api_keys, revoke_api_key};
 
 // Session handlers and types
 pub use sessions::{
@@ -61,6 +66,9 @@ pub use admin::{
     get_user, get_user_stats, list_eavs_providers, list_users, sync_all_models, sync_user_configs,
     update_user, upsert_eavs_provider,
 };
+
+// OAuth handlers
+pub use oauth::{oauth_callback, oauth_delete, oauth_login, oauth_poll, oauth_providers};
 
 // Auth handlers and types
 pub use auth::{change_password, dev_login, get_me, login, logout, register, update_me};

@@ -74,6 +74,8 @@ dev_user_id=""
 dev_user_name=""
 dev_user_email=""
 # dev_user_password is never persisted -- prompted inline when needed
+dev_user_password_plain=""
+dev_user_password_generated="false"
 
 # Paths (XDG compliant)
 : "${XDG_CONFIG_HOME:=$HOME/.config}"

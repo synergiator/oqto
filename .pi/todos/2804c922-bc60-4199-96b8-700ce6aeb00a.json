@@ -9,25 +9,25 @@
     {
       "id": "t31",
       "content": "Backend: convert personal workspace to shared workspace API",
-      "status": "in_progress",
+      "status": "completed",
       "priority": "high"
     },
     {
       "id": "t32",
       "content": "Backend: SharedWorkspaceService initialization in server startup",
-      "status": "pending",
+      "status": "completed",
       "priority": "high"
     },
     {
       "id": "t33",
       "content": "Backend: admin endpoints for shared workspace management",
-      "status": "pending",
+      "status": "completed",
       "priority": "medium"
     },
     {
       "id": "t34",
       "content": "Frontend: convert-to-shared flow in project context menu",
-      "status": "pending",
+      "status": "completed",
       "priority": "medium"
     },
     {
@@ -39,9 +39,9 @@
     {
       "id": "t36",
       "content": "Update design doc and compile/verify",
-      "status": "pending",
+      "status": "completed",
       "priority": "high"
     }
   ],
-  "updated_at": "2026-02-27T19:54:15.876Z"
+  "updated_at": "2026-02-27T20:02:04.230Z"
 }

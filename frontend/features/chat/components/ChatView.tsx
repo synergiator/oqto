@@ -428,10 +428,12 @@ export function ChatView({
 	// Cleared on send and jump-to-bottom. Only while this is true does
 	// the scroll event handler update isUserScrolled state.
 	const userInitiatedScrollRef = useRef(false);
+	const programmaticScrollRef = useRef(false);
 
 	const scrollToBottom = useCallback(() => {
 		const c = messagesContainerRef.current;
 		if (!c) return;
+		programmaticScrollRef.current = true;
 		c.scrollTop = c.scrollHeight;
 	}, []);
 
@@ -1019,6 +1021,7 @@ export function ChatView({
 
 			// Scroll to the message
 			requestAnimationFrame(() => {
+				programmaticScrollRef.current = true;
 				messageEl.scrollIntoView({ behavior: "smooth", block: "center" });
 				// Add highlight animation
 				messageEl.classList.add("search-highlight");
@@ -1082,8 +1085,10 @@ export function ChatView({
 		const container = messagesContainerRef.current;
 		const cachedPosition = getCachedScrollPosition(scrollStorageKey);
 		if (cachedPosition !== null) {
+			programmaticScrollRef.current = true;
 			container.scrollTop = cachedPosition;
 		} else {
+			programmaticScrollRef.current = true;
 			messagesEndRef.current?.scrollIntoView();
 		}
 	}, [messages.length, scrollStorageKey]);
@@ -1099,13 +1104,23 @@ export function ChatView({
 				Math.min(prev + LOAD_MORE_COUNT, messages.length),
 			);
 			requestAnimationFrame(() => {
+				programmaticScrollRef.current = true;
 				container.scrollTop = container.scrollHeight - prevScrollHeight;
 			});
 		}
 
-		// Only update scroll state when the scroll came from a user gesture
-		if (!userInitiatedScrollRef.current) return;
-		userInitiatedScrollRef.current = false;
+		// Ignore scroll events caused by programmatic updates.
+		if (programmaticScrollRef.current) {
+			programmaticScrollRef.current = false;
+			userInitiatedScrollRef.current = false;
+			return;
+		}
+
+		// Prefer the explicit user gesture flag, but allow scrollbar drag and
+		// keyboard scrolls that do not emit wheel/touch/pointer events.
+		if (userInitiatedScrollRef.current) {
+			userInitiatedScrollRef.current = false;
+		}
 
 		const atBottom =
 			container.scrollHeight - container.scrollTop - container.clientHeight <

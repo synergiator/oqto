@@ -30,6 +30,8 @@ Options:
                         - Installs all dependencies and services
   
   --dev, --development  Development mode (no hardening, dev auth enabled)
+                        - Insecure for public servers (dev users are guessable)
+                        - Explicitly required to enable dev_mode
   
   --domain <domain>     Set domain and enable Caddy reverse proxy
                         Example: --domain oqto.example.com
@@ -65,7 +67,7 @@ Environment Variables:
   OQTO_INSTALL_DEPS       yes or no (default: yes)
   OQTO_INSTALL_SERVICE    yes or no (default: yes)
   OQTO_INSTALL_AGENT_TOOLS yes or no (default: yes)
-  OQTO_DEV_MODE           true or false (default: prompt user)
+  OQTO_DEV_MODE           true or false (default: false; dev mode requires --dev or explicit env)
   OQTO_LOG_LEVEL          error, warn, info, debug, trace (default: info)
   OQTO_SETUP_CADDY        yes or no (default: prompt user in production mode)
   OQTO_DOMAIN             domain for HTTPS (e.g., oqto.example.com)
@@ -390,9 +392,9 @@ BANNER
       select_backend_mode
       select_deployment_mode
     else
-      # Non-interactive: use env var or default to dev mode
+      # Non-interactive: dev mode is disabled unless explicitly enabled
       if [[ -z "$OQTO_DEV_MODE" ]]; then
-        OQTO_DEV_MODE="true"
+        OQTO_DEV_MODE="false"
       fi
       PRODUCTION_MODE="$([[ "$OQTO_DEV_MODE" == "false" ]] && echo "true" || echo "false")"
     fi

@@ -27,6 +27,14 @@ generate_password_hash() {
   fi
 }
 
+generate_dev_password() {
+  if command_exists openssl; then
+    openssl rand -base64 24
+  else
+    head -c 24 /dev/urandom | base64
+  fi
+}
+
 write_skdlr_agent_config() {
   local skdlr_config="/etc/oqto/skdlr-agent.toml"
   local sandbox_config="/etc/oqto/sandbox.toml"
@@ -93,7 +101,14 @@ generate_config() {
     dev_user_name=$(prompt_input "Dev user name" "${dev_user_name:-Developer}")
     dev_user_email=$(prompt_input "Dev user email" "${dev_user_email:-dev@localhost}")
     local dev_password
-    dev_password=$(prompt_password "Dev user password")
+    dev_password=$(prompt_password "Dev user password (leave blank to generate)")
+
+    if [[ -z "$dev_password" ]]; then
+      dev_password=$(generate_dev_password)
+      dev_user_password_generated="true"
+      dev_user_password_plain="$dev_password"
+      log_info "Generated a dev password. It will be shown once in the setup summary."
+    fi
 
     if [[ -n "$dev_password" ]]; then
       log_info "Generating password hash..."

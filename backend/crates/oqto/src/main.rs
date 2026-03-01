@@ -32,6 +32,7 @@ use tokio::net::{UnixListener, UnixStream};
 mod agent_browser;
 
 mod api;
+mod api_keys;
 mod audit;
 mod auth;
 mod canon;
@@ -638,6 +639,31 @@ struct EavsConfig {
     default_session_budget_usd: Option<f64>,
     /// Default session rate limit in requests per minute.
     default_session_rpm: Option<u32>,
+    /// OAuth login configuration for per-user provider sign-in.
+    #[serde(default)]
+    oauth: EavsOAuthConfig,
+}
+
+/// EAVS OAuth login configuration.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+struct EavsOAuthConfig {
+    /// Enable per-user OAuth logins (Anthropic, OpenAI Codex, etc.).
+    enabled: bool,
+    /// Allowed OAuth providers (e.g., "anthropic", "openai-codex").
+    providers: Vec<String>,
+    /// Redirect URI to send to providers (required for OpenAI Codex).
+    redirect_uri: Option<String>,
+}
+
+impl Default for EavsOAuthConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            providers: Vec::new(),
+            redirect_uri: None,
+        }
+    }
 }
 
 /// Voice mode configuration.
@@ -2141,11 +2167,14 @@ async fn handle_serve(ctx: &RuntimeContext, cmd: ServeCommand) -> Result<()> {
     let settings_pi_models =
         settings::SettingsService::new_json(pi_models_schema, pi_config_dir, "models.json").ok();
 
+    let api_key_repo = api_keys::ApiKeyRepository::new(database.pool().clone());
+
     // Create app state
     let mut state = api::AppState::new(
         session_service,
         user_service,
         invite_repo,
+        api_key_repo,
         auth_state,
         mmry_state,
         voice_state,
@@ -2331,6 +2360,11 @@ async fn handle_serve(ctx: &RuntimeContext, cmd: ServeCommand) -> Result<()> {
             config_path: std::path::PathBuf::from(eavs_config_path),
             env_path: std::path::PathBuf::from(eavs_env_path),
         });
+        state = state.with_eavs_oauth_config(
+            eavs_config.oauth.enabled,
+            eavs_config.oauth.providers.clone(),
+            eavs_config.oauth.redirect_uri.clone(),
+        );
 
         if let Some(ref master_key) = eavs_config.master_key {
             match eavs::EavsClient::new(&eavs_config.base_url, master_key) {
