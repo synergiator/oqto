@@ -12,13 +12,13 @@ ONBOARDING_TEMPLATES_PATH_DEFAULT="/usr/share/oqto/oqto-templates/"
 PROJECT_TEMPLATES_PATH_DEFAULT="/usr/share/oqto/oqto-templates/agents/"
 
 # Default values (can be overridden by environment variables)
-: "${OQTO_USER_MODE:=single}"        # single or multi
-: "${OQTO_BACKEND_MODE:=local}"      # local or container
+: "${OQTO_USER_MODE:=multi}"         # single or multi
+: "${OQTO_BACKEND_MODE:=container}"  # local or container
 : "${OQTO_CONTAINER_RUNTIME:=auto}"  # docker, podman, or auto
 : "${OQTO_INSTALL_DEPS:=yes}"        # yes or no
 : "${OQTO_INSTALL_SERVICE:=yes}"     # yes or no
 : "${OQTO_INSTALL_AGENT_TOOLS:=yes}" # yes or no (agntz, mmry, trx)
-: "${OQTO_DEV_MODE:=}"               # true or false (auth dev mode) - empty = prompt
+: "${OQTO_DEV_MODE:=false}"          # true or false (auth dev mode)
 : "${OQTO_LOG_LEVEL:=info}"          # error, warn, info, debug, trace
 : "${OQTO_SETUP_CADDY:=}"            # yes or no - empty = prompt
 : "${OQTO_DOMAIN:=}"                 # domain for HTTPS (e.g., oqto.example.com)

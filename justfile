@@ -243,6 +243,9 @@ update-runner:
 e2e-proxmox-lxc-create:
     ./scripts/e2e/proxmox-lxc-create.sh
 
+e2e-proxmox-lxc-login target="ephemeral":
+    ./scripts/e2e/proxmox-lxc-login.sh --target {{target}}
+
 e2e-proxmox-prepare:
     ./scripts/e2e/proxmox-prepare.sh
 

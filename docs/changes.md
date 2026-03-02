@@ -1,5 +1,7 @@
 # Changes
 
+- 2026-03-02: Align setup defaults to multi-user + container with dev mode disabled.
+- 2026-03-02: Add Proxmox LXC login script for manual setup demos.
 - 2026-03-02: Fix Proxmox E2E setup URL generation and make shared workspace smoke test names short to avoid Linux username limits.
 - 2026-03-02: Install yazi from GitHub releases before falling back to cargo builds (fix release extraction).
 - 2026-03-02: Add low-memory build overrides for Proxmox E2E source builds.
