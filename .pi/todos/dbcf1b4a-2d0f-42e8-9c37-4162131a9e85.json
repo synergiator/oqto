@@ -1,29 +1,23 @@
 {
   "todos": [
     {
-      "id": "9975db93",
-      "content": "Inspect oqto-website build pipeline and setup schema sources in oqto repo",
+      "id": "ef9b0f1f",
+      "content": "Polish settings layout (settings index + SettingsEditor)",
       "status": "completed",
       "priority": "high"
     },
     {
-      "id": "701a7999",
-      "content": "Add schema sync/generator scripts and update oqto-website build to consume schema",
+      "id": "02e53c58",
+      "content": "Push release/tag and verify yazi install after changes",
+      "status": "pending",
+      "priority": "medium"
+    },
+    {
+      "id": "846cac13",
+      "content": "Fix yazi cargo fallback to use yazi-build in setup script",
       "status": "completed",
       "priority": "high"
-    },
-    {
-      "id": "93e4bbd8",
-      "content": "Add CI/check or justfile task to enforce schema sync",
-      "status": "completed",
-      "priority": "medium"
-    },
-    {
-      "id": "be7dce7f",
-      "content": "Document website schema sync workflow",
-      "status": "completed",
-      "priority": "medium"
     }
   ],
-  "updated_at": "2026-03-01T10:47:29.490Z"
+  "updated_at": "2026-03-02T15:18:17.465Z"
 }

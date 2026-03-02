@@ -3,11 +3,8 @@
  * Reads Pi chat history from disk (from hstry)
  */
 
-import type {
-	AgentMessage,
-	MessagePart,
-	MessageWithParts,
-} from "../agent-client";
+import type { AgentMessage, MessagePart, MessageWithParts } from "../agent-client";
+import type { Message, Part, Role } from "@/lib/canonical-types";
 import { authFetch, controlPlaneApiUrl, readApiError } from "./client";
 
 const normalizeWorkspacePathValue = (path?: string | null): string | null => {
@@ -72,49 +69,11 @@ export type UpdateChatSessionRequest = {
 };
 
 // ============================================================================
-// Chat Message Types (from disk, from hstry)
+// Chat Message Types (canonical)
 // ============================================================================
 
-/** A single part of a chat message */
-export type ChatMessagePart = {
-	id: string;
-	part_type: string;
-	/** Text content (for text parts) */
-	text: string | null;
-	/** Tool name (for tool parts) */
-	tool_name: string | null;
-	/** Tool call id (for tool parts) */
-	tool_call_id?: string | null;
-	/** Tool input (for tool parts) */
-	tool_input: unknown | null;
-	/** Tool output (for tool parts) */
-	tool_output: string | null;
-	/** Tool status (for tool parts) */
-	tool_status: string | null;
-	/** Tool title/summary (for tool parts) */
-	tool_title: string | null;
-};
-
-/** A chat message with its content parts */
-export type ChatMessage = {
-	id: string;
-	session_id: string;
-	role: string;
-	created_at: number;
-	completed_at: number | null;
-	parent_id: string | null;
-	model_id: string | null;
-	provider_id: string | null;
-	agent: string | null;
-	summary_title: string | null;
-	tokens_input: number | null;
-	tokens_output: number | null;
-	cost: number | null;
-	/** Client-generated ID for optimistic message matching */
-	client_id?: string | null;
-	/** Message content parts */
-	parts: ChatMessagePart[];
-};
+export type ChatMessagePart = Part;
+export type ChatMessage = Message;
 
 // ============================================================================
 // Chat History API (reads from disk, from hstry)
@@ -217,72 +176,151 @@ export async function getChatMessages(
 }
 
 // ============================================================================
-// Message Format Conversion (disk format -> canonical format)
+// Message Format Conversion (canonical -> agent-client format)
 // ============================================================================
 
-/** Convert a ChatMessage (from disk) to MessageWithParts (for rendering) */
-export function convertChatMessageToAgent(msg: ChatMessage): MessageWithParts {
-	// Convert parts
-	const parts: MessagePart[] = msg.parts.map((part) => ({
-		id: part.id,
-		sessionID: msg.session_id,
-		messageID: msg.id,
-		type: part.part_type as MessagePart["type"],
-		text: part.text ?? undefined,
-		tool: part.tool_name ?? undefined,
-		state: part.tool_name
-			? {
-					status:
-						(part.tool_status as
-							| "pending"
-							| "running"
-							| "completed"
-							| "error") ?? "completed",
-					input: part.tool_input as Record<string, unknown> | undefined,
-					output: part.tool_output ?? undefined,
-					title: part.tool_title ?? undefined,
-				}
-			: undefined,
-	}));
+const normalizeRoleForAgent = (role: Role): "user" | "assistant" =>
+	role === "user" ? "user" : "assistant";
 
-	// Build message info based on role
+const formatToolOutput = (output: unknown): string => {
+	if (output == null) return "";
+	if (typeof output === "string") return output;
+	try {
+		return JSON.stringify(output, null, 2);
+	} catch {
+		return String(output);
+	}
+};
+
+const mapToolStatus = (
+	status: "pending" | "running" | "success" | "error" | undefined,
+): "pending" | "running" | "completed" | "error" => {
+	switch (status) {
+		case "pending":
+			return "pending";
+		case "running":
+			return "running";
+		case "error":
+			return "error";
+		case "success":
+		default:
+			return "completed";
+	}
+};
+
+const canonicalPartToAgentPart = (
+	part: ChatMessagePart,
+	messageId: string,
+	sessionId: string,
+): MessagePart => {
+	switch (part.type) {
+		case "text":
+			return {
+				id: part.id,
+				sessionID: sessionId,
+				messageID: messageId,
+				type: "text",
+				text: part.text,
+			};
+		case "thinking":
+			return {
+				id: part.id,
+				sessionID: sessionId,
+				messageID: messageId,
+				type: "reasoning",
+				text: part.text,
+			};
+		case "tool_call":
+			return {
+				id: part.id,
+				sessionID: sessionId,
+				messageID: messageId,
+				type: "tool",
+				tool: part.name,
+				callID: part.toolCallId,
+				state: {
+					status: mapToolStatus(part.status),
+					input: (part.input ?? undefined) as Record<string, unknown> | undefined,
+					title: part.name,
+				},
+			};
+		case "tool_result":
+			return {
+				id: part.id,
+				sessionID: sessionId,
+				messageID: messageId,
+				type: "tool",
+				tool: part.name ?? "tool",
+				callID: part.toolCallId,
+				state: {
+					status: part.isError ? "error" : "completed",
+					output: formatToolOutput(part.output),
+					title: part.name ?? "Tool Result",
+				},
+			};
+		case "file_ref":
+			return {
+				id: part.id,
+				sessionID: sessionId,
+				messageID: messageId,
+				type: "file",
+				url: part.uri,
+				filename: part.label ?? undefined,
+			};
+		default:
+			return {
+				id: part.id,
+				sessionID: sessionId,
+				messageID: messageId,
+				type: "text",
+				text: JSON.stringify(part),
+			};
+	}
+};
+
+/** Convert a ChatMessage (canonical) to MessageWithParts (for rendering). */
+export function convertChatMessageToAgent(
+	msg: ChatMessage,
+	sessionId: string,
+): MessageWithParts {
+	const parts: MessagePart[] = msg.parts.map((part) =>
+		canonicalPartToAgentPart(part, msg.id, sessionId),
+	);
+
+	const role = normalizeRoleForAgent(msg.role as Role);
+
 	const info: AgentMessage =
-		msg.role === "user"
+		role === "user"
 			? {
 					id: msg.id,
-					sessionID: msg.session_id,
-					role: "user" as const,
+					sessionID: sessionId,
+					role: "user",
 					time: { created: msg.created_at },
-					agent: msg.agent ?? undefined,
 					model:
-						msg.provider_id && msg.model_id
-							? {
-									providerID: msg.provider_id,
-									modelID: msg.model_id,
-								}
+						msg.model && msg.provider
+							? { providerID: msg.provider, modelID: msg.model }
 							: undefined,
 				}
 			: {
 					id: msg.id,
-					sessionID: msg.session_id,
-					role: "assistant" as const,
-					time: {
-						created: msg.created_at,
-						completed: msg.completed_at ?? undefined,
-					},
-					parentID: msg.parent_id ?? "",
-					modelID: msg.model_id ?? "",
-					providerID: msg.provider_id ?? "",
-					cost: msg.cost ?? undefined,
-					tokens:
-						msg.tokens_input != null || msg.tokens_output != null
-							? {
-									input: msg.tokens_input ?? 0,
-									output: msg.tokens_output ?? 0,
-									reasoning: 0,
-									cache: { read: 0, write: 0 },
-								}
-							: undefined,
+					sessionID: sessionId,
+					role: "assistant",
+					time: { created: msg.created_at },
+					parentID: "",
+					modelID: msg.model ?? "",
+					providerID: msg.provider ?? "",
+					cost: msg.usage?.cost_usd ?? undefined,
+					tokens: msg.usage
+						? {
+								input: msg.usage.input_tokens,
+								output: msg.usage.output_tokens,
+								reasoning: 0,
+								cache: {
+									read: msg.usage.cache_read_tokens ?? 0,
+									write: msg.usage.cache_write_tokens ?? 0,
+								},
+							}
+						: undefined,
 				};
 
 	return { info, parts };
@@ -291,6 +329,11 @@ export function convertChatMessageToAgent(msg: ChatMessage): MessageWithParts {
 /** Convert an array of ChatMessages to MessageWithParts */
 export function convertChatMessagesToAgent(
 	messages: ChatMessage[],
+	sessionId: string,
 ): MessageWithParts[] {
-	return messages.map(convertChatMessageToAgent);
+	return messages.map((message) =>
+		convertChatMessageToAgent(message, sessionId),
+	);
 }
+
+export const convertChatMessagesToCanonical = convertChatMessagesToAgent;

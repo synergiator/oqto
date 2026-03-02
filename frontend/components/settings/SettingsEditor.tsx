@@ -205,27 +205,31 @@ export function SettingsEditor({
 				</div>
 			)}
 
-			{/* Floating action buttons */}
+			{/* Action bar */}
 			{(hasChanges || isAdmin) && (
-				<div className="fixed bottom-6 right-6 z-20 flex items-center gap-2">
-					{isAdmin && (
-						<Button
-							type="button"
-							variant="outline"
-							size="icon"
-							onClick={handleReload}
-							className="h-10 w-10 rounded-full shadow-lg bg-background"
-						>
-							<RotateCcw className="h-4 w-4" />
-						</Button>
-					)}
-					{hasChanges && (
+				<div className="flex items-center justify-between gap-3 px-4 sm:px-0 py-2 sm:py-0">
+					<div className="text-xs text-muted-foreground">
+						{hasChanges ? "Unsaved changes" : "All changes saved"}
+					</div>
+					<div className="flex items-center gap-2">
+						{isAdmin && (
+							<Button
+								type="button"
+								variant="outline"
+								size="sm"
+								onClick={handleReload}
+								className="h-9"
+							>
+								<RotateCcw className="h-4 w-4 mr-2" />
+								Reload
+							</Button>
+						)}
 						<Button
 							type="button"
 							size="sm"
 							onClick={handleSave}
-							disabled={saving}
-							className="h-10 px-4 rounded-full shadow-lg"
+							disabled={saving || !hasChanges}
+							className="h-9"
 						>
 							{saving ? (
 								<Loader2 className="h-4 w-4 animate-spin" />
@@ -234,11 +238,11 @@ export function SettingsEditor({
 							) : (
 								<>
 									<Save className="h-4 w-4 mr-2" />
-									Save
+									Save changes
 								</>
 							)}
 						</Button>
-					)}
+					</div>
 				</div>
 			)}
 

@@ -141,7 +141,7 @@ export type UseChatReturn = {
 export type RawMessage = {
 	id?: string;
 	role: string;
-	content: unknown;
+	content?: unknown;
 	/** Canonical message parts (array of Part objects from oqto-protocol). */
 	parts?: unknown[];
 	timestamp?: number;

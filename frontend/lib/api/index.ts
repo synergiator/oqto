@@ -84,6 +84,7 @@ export {
 	getChatMessages,
 	convertChatMessageToAgent,
 	convertChatMessagesToAgent,
+	convertChatMessagesToCanonical,
 } from "./chat";
 
 // Default chat (Pi) APIs

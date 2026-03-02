@@ -98,15 +98,23 @@ interface TabButtonProps {
 	onClick: () => void;
 	icon: LucideIcon;
 	label: string;
+	showLabel?: boolean;
 }
 
-function TabButton({ active, onClick, icon: Icon, label }: TabButtonProps) {
+function TabButton({
+	active,
+	onClick,
+	icon: Icon,
+	label,
+	showLabel = false,
+}: TabButtonProps) {
 	return (
 		<button
 			type="button"
 			onClick={onClick}
 			className={cn(
-				"flex-1 flex items-center justify-center px-1.5 py-1 relative transition-colors",
+				"flex-1 flex items-center justify-center px-2 py-1.5 relative transition-colors",
+				showLabel && "gap-2 text-sm",
 				active
 					? "bg-primary/15 text-foreground border border-primary"
 					: "text-muted-foreground border border-transparent hover:border-border hover:bg-muted/50",
@@ -114,6 +122,7 @@ function TabButton({ active, onClick, icon: Icon, label }: TabButtonProps) {
 			title={label}
 		>
 			<Icon className="w-4 h-4" />
+			{showLabel && <span className="truncate">{label}</span>}
 		</button>
 	);
 }
@@ -401,24 +410,28 @@ export function SettingsApp() {
 							onClick={() => setMainTab("oqto")}
 							icon={Settings}
 							label={t("settings.oqtoTab")}
+							showLabel
 						/>
 						<TabButton
 							active={mainTab === "mmry"}
 							onClick={() => setMainTab("mmry")}
 							icon={Brain}
 							label={t("settings.mmryTab")}
+							showLabel
 						/>
 						<TabButton
 							active={mainTab === "account"}
 							onClick={() => setMainTab("account")}
 							icon={User}
 							label={t("settings.accountTab")}
+							showLabel
 						/>
 						<TabButton
 							active={mainTab === "api-keys"}
 							onClick={() => setMainTab("api-keys")}
 							icon={Key}
 							label={t("settings.apiKeysTab", "API Keys")}
+							showLabel
 						/>
 					</div>
 

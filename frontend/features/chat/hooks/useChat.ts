@@ -14,17 +14,8 @@
  */
 
 import { useBusySessions } from "@/components/contexts";
-import {
-	type ChatMessage,
-	type ChatMessagePart,
-	getChatMessages,
-} from "@/lib/api";
-import type {
-	CommandResponse,
-	Part,
-	SessionConfig,
-	ToolStatus,
-} from "@/lib/canonical-types";
+import { getChatMessages } from "@/lib/api";
+import type { CommandResponse, SessionConfig } from "@/lib/canonical-types";
 import {
 	createPiSessionId,
 	getWorkspaceModelStorageKey,
@@ -84,116 +75,6 @@ function isPiDebugEnabled(): boolean {
 	return import.meta.env.VITE_DEBUG_PI_V2 === "1";
 }
 
-function normalizeToolStatus(value?: string | null): ToolStatus {
-	switch (value?.toLowerCase()) {
-		case "pending":
-			return "pending";
-		case "running":
-			return "running";
-		case "error":
-			return "error";
-		case "success":
-		case "completed":
-			return "success";
-		default:
-			return "success";
-	}
-}
-
-function chatMessagePartToCanonicalParts(part: ChatMessagePart): Part[] {
-	const parts: Part[] = [];
-	if (part.part_type === "thinking" && part.text) {
-		parts.push({
-			type: "thinking",
-			id: part.id,
-			text: part.text,
-		});
-		return parts;
-	}
-	if (part.part_type === "text" && part.text) {
-		parts.push({
-			type: "text",
-			id: part.id,
-			text: part.text,
-		});
-		return parts;
-	}
-
-	const hasToolData = Boolean(
-		part.tool_name || part.tool_input || part.tool_output,
-	);
-	if (part.part_type === "tool_call") {
-		const toolCallId = part.tool_call_id ?? part.id;
-		parts.push({
-			type: "tool_call",
-			id: `${part.id}-call`,
-			toolCallId,
-			name: part.tool_name ?? "tool",
-			input: part.tool_input ?? undefined,
-			status: normalizeToolStatus(part.tool_status),
-		});
-		return parts;
-	}
-	if (part.part_type === "tool_result") {
-		const toolCallId = part.tool_call_id ?? part.id;
-		parts.push({
-			type: "tool_result",
-			id: `${part.id}-result`,
-			toolCallId,
-			name: part.tool_name ?? "tool",
-			output: part.tool_output ?? part.tool_title ?? "",
-			isError: normalizeToolStatus(part.tool_status) === "error",
-		});
-		return parts;
-	}
-	if (part.part_type === "tool" || hasToolData) {
-		const toolCallId = part.tool_call_id ?? part.id;
-		const name = part.tool_name ?? "tool";
-		if (part.tool_input) {
-			parts.push({
-				type: "tool_call",
-				id: `${part.id}-call`,
-				toolCallId,
-				name,
-				input: part.tool_input,
-				status: normalizeToolStatus(part.tool_status),
-			});
-		}
-		if (part.tool_output || part.tool_title || part.tool_status) {
-			parts.push({
-				type: "tool_result",
-				id: `${part.id}-result`,
-				toolCallId,
-				name,
-				output: part.tool_output ?? part.tool_title ?? "",
-				isError: normalizeToolStatus(part.tool_status) === "error",
-			});
-		}
-		return parts;
-	}
-
-	if (part.text) {
-		parts.push({
-			type: "text",
-			id: part.id,
-			text: part.text,
-		});
-	}
-	return parts;
-}
-
-function chatMessageToRaw(message: ChatMessage): RawMessage {
-	const parts = message.parts.flatMap(chatMessagePartToCanonicalParts);
-	return {
-		id: message.id,
-		role: message.role,
-		created_at: message.created_at,
-		parts,
-		model_id: message.model_id ?? null,
-		provider_id: message.provider_id ?? null,
-		client_id: message.client_id ?? undefined,
-	};
-}
 
 /**
  * Hook for managing Pi chat using the multiplexed WebSocket.
@@ -486,7 +367,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
 				const history = await getChatMessages(sessionId);
 				if (history.length === 0) return;
 				const displayMessages = normalizeMessages(
-					history.map(chatMessageToRaw),
+					history as RawMessage[],
 					`history-${sessionId}`,
 				);
 				if (displayMessages.length === 0) return;

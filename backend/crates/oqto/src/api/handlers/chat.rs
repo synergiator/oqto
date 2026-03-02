@@ -729,7 +729,7 @@ pub async fn get_chat_messages(
     user: CurrentUser,
     Path(session_id): Path<String>,
     Query(query): Query<ChatMessagesQuery>,
-) -> ApiResult<Json<Vec<ChatMessage>>> {
+) -> ApiResult<Json<Vec<oqto_protocol::messages::Message>>> {
     let multi_user = is_multi_user_mode(&state);
     let prefer_hstry = !multi_user && state.hstry.is_some();
 
@@ -779,8 +779,10 @@ pub async fn get_chat_messages(
                         })
                         .collect();
 
-                    info!(user_id = %user.id(), session_id = %session_id, count = messages.len(), render = query.render, "Listed chat messages via runner");
-                    return Ok(Json(messages));
+                    let canonical = crate::history::legacy_messages_to_canon(messages);
+
+                    info!(user_id = %user.id(), session_id = %session_id, count = canonical.len(), render = query.render, "Listed chat messages via runner");
+                    return Ok(Json(canonical));
                 }
                 Err(e) => {
                     if multi_user {
@@ -810,16 +812,14 @@ pub async fn get_chat_messages(
 
     // Single-user mode: use hstry gRPC directly
     let messages = if let Some(hstry) = state.hstry.as_ref() {
-        if query.render {
-            crate::history::get_session_messages_rendered_via_grpc(hstry, &session_id).await
-        } else {
-            crate::history::repository::get_session_messages_via_grpc(hstry, &session_id).await
-        }
+        crate::history::repository::get_session_messages_via_grpc(hstry, &session_id).await
     } else {
         Err(anyhow::anyhow!("hstry not configured"))
     }
     .map_err(|e| ApiError::internal(format!("Failed to get chat messages: {}", e)))?;
 
-    info!(session_id = %session_id, count = messages.len(), render = query.render, "Listed chat messages");
-    Ok(Json(messages))
+    let canonical = crate::history::legacy_messages_to_canon(messages);
+
+    info!(session_id = %session_id, count = canonical.len(), render = query.render, "Listed chat messages");
+    Ok(Json(canonical))
 }

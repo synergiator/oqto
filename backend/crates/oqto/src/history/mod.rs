@@ -4,11 +4,13 @@
 //! either via gRPC (preferred) or direct SQLite access (runner-side).
 
 pub mod models;
+pub mod canon;
 pub mod repository;
 pub mod service;
 
 // Re-export commonly used types and functions
 #[allow(unused_imports)]
+pub use canon::{legacy_message_to_canon, legacy_messages_to_canon};
 pub use models::{
     ChatMessage, ChatMessagePart, ChatSession, ChatSessionStats, HstrySearchHit, MessageInfo,
     MessageSummary, MessageTime, PartInfo, SessionInfo, SessionTime, TokenUsage, ToolState,

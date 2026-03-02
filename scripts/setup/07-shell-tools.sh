@@ -402,10 +402,14 @@ install_shell_tools_cargo() {
     yazi | yazi-fm)
       log_info "Installing yazi from GitHub releases..."
       if ! install_yazi_from_github "$tmpdir"; then
-        log_info "Falling back to yazi via cargo..."
-        cargo install --locked yazi-fm yazi-cli --root "$tmpdir"
-        sudo install -m 755 "$tmpdir/bin/yazi" "${TOOLS_INSTALL_DIR}/yazi"
-        sudo install -m 755 "$tmpdir/bin/ya" "${TOOLS_INSTALL_DIR}/ya" 2>/dev/null || true
+        log_info "Falling back to yazi via cargo (yazi-build)..."
+        cargo install --locked --force yazi-build --root "$tmpdir"
+        if [[ ! -x "$tmpdir/bin/yazi" ]]; then
+          log_warn "yazi binary not produced by yazi-build; check cargo output"
+        else
+          sudo install -m 755 "$tmpdir/bin/yazi" "${TOOLS_INSTALL_DIR}/yazi"
+          sudo install -m 755 "$tmpdir/bin/ya" "${TOOLS_INSTALL_DIR}/ya" 2>/dev/null || true
+        fi
       fi
       ;;
     zoxide)

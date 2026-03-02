@@ -23,7 +23,10 @@ export async function fetchDefaultChatThreadedMessages(
 		try {
 			const historyMessages = await getChatMessages(session.id);
 			if (historyMessages.length === 0) continue;
-			const converted = convertChatMessagesToCanonical(historyMessages);
+			const converted = convertChatMessagesToCanonical(
+				historyMessages,
+				session.id,
+			);
 			converted.forEach((msg, idx) => {
 				const threadedMsg: ThreadedMessage = {
 					...msg,
