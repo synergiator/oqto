@@ -61,7 +61,7 @@ function TabButton({
 			)}
 		>
 			<Icon className="w-4 h-4 flex-shrink-0" />
-			{!hideLabel && <span className="truncate">{label}</span>}
+			{!hideLabel && <span className="hidden sm:inline truncate">{label}</span>}
 			{badge !== undefined && badge > 0 && (
 				<span
 					className={cn(

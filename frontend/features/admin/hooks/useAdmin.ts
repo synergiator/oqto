@@ -220,6 +220,33 @@ export function useAdminSessions() {
 	});
 }
 
+// ============================================================================
+// Admin Stats
+// ============================================================================
+
+export type AdminStats = {
+	total_users: number;
+	active_users: number;
+	total_sessions: number;
+	running_sessions: number;
+};
+
+async function fetchAdminStats(): Promise<AdminStats> {
+	const res = await fetch(controlPlaneApiUrl("/api/admin/stats"), {
+		headers: getAuthHeaders(),
+	});
+	if (!res.ok) throw new Error(await readApiError(res));
+	return res.json();
+}
+
+export function useAdminStats() {
+	return useQuery({
+		queryKey: [...adminKeys.all, "stats"] as const,
+		queryFn: fetchAdminStats,
+		refetchInterval: 10000,
+	});
+}
+
 export function useForceStopSession() {
 	const queryClient = useQueryClient();
 	return useMutation({

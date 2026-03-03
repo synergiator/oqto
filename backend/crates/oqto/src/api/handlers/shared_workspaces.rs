@@ -38,6 +38,39 @@ pub async fn create_shared_workspace(
         .await
         .map_err(|e| ApiError::bad_request(format!("failed to create shared workspace: {}", e)))?;
 
+    // Provision EAVS virtual key + models.json for the shared workspace user
+    // so Pi can use LLM providers. Best-effort: log warning if it fails.
+    if multi_user {
+        if let Some(eavs_client) = state.eavs_client.as_ref() {
+            if let Some(linux_users) = state.linux_users.as_ref() {
+                let sw_user_id = format!("shared-{}", workspace.id);
+                match super::admin::provision_eavs_for_user(
+                    eavs_client,
+                    linux_users,
+                    &workspace.linux_user,
+                    &sw_user_id,
+                )
+                .await
+                {
+                    Ok(_) => {
+                        tracing::info!(
+                            workspace_id = %workspace.id,
+                            linux_user = %workspace.linux_user,
+                            "provisioned EAVS key and models.json for shared workspace"
+                        );
+                    }
+                    Err(e) => {
+                        tracing::warn!(
+                            workspace_id = %workspace.id,
+                            error = %e,
+                            "failed to provision EAVS for shared workspace (sessions won't have LLM access)"
+                        );
+                    }
+                }
+            }
+        }
+    }
+
     info!(
         workspace_id = %workspace.id,
         name = %workspace.name,

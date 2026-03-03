@@ -6,6 +6,7 @@ import {
 	type AdminMetricsSnapshot,
 	type HostMetrics,
 	useAdminMetrics,
+	useAdminStats,
 } from "@/hooks/use-admin";
 import {
 	Activity,
@@ -14,6 +15,7 @@ import {
 	HardDrive,
 	Network,
 	Server,
+	Users,
 	Wifi,
 	WifiOff,
 } from "lucide-react";
@@ -113,61 +115,62 @@ function MetricsChart({ dataPoints }: { dataPoints: DataPoint[] }) {
 	const memPath = createPath(memValues);
 
 	return (
-		<div className="h-32 md:h-48 relative">
-			{/* Grid */}
-			<div className="absolute inset-0 grid grid-cols-6 md:grid-cols-12 grid-rows-4 md:grid-rows-6 opacity-20">
-				{Array.from({ length: 24 }, (_, i) => `grid-${i}`).map((key) => (
-					<div key={key} className="border border-border" />
-				))}
+		<div className="flex flex-col gap-2">
+			{/* Legend + current values row */}
+			<div className="flex items-center justify-between text-[10px] md:text-xs">
+				<div className="flex gap-3 md:gap-4">
+					<div className="flex items-center gap-1">
+						<div className="w-2 md:w-3 h-0.5 bg-primary" />
+						<span className="text-muted-foreground">CPU</span>
+					</div>
+					<div className="flex items-center gap-1">
+						<div className="w-2 md:w-3 h-0.5 bg-foreground opacity-50" />
+						<span className="text-muted-foreground">Memory</span>
+					</div>
+				</div>
+				<div className="flex gap-3 md:gap-4">
+					<span className="text-primary font-mono">
+						CPU: {cpuValues[cpuValues.length - 1]?.toFixed(1) ?? 0}%
+					</span>
+					<span className="text-muted-foreground font-mono">
+						MEM: {memValues[memValues.length - 1]?.toFixed(1) ?? 0}%
+					</span>
+				</div>
 			</div>
 
 			{/* Chart */}
-			<svg
-				className="absolute inset-0 w-full h-full"
-				viewBox={`0 0 ${width} ${height}`}
-				preserveAspectRatio="none"
-			>
-				<title>System metrics chart</title>
-				{/* CPU line */}
-				<path
-					d={cpuPath}
-					fill="none"
-					stroke="var(--primary)"
-					strokeWidth="2"
-					vectorEffect="non-scaling-stroke"
-				/>
-				{/* Memory line */}
-				<path
-					d={memPath}
-					fill="none"
-					stroke="var(--foreground)"
-					strokeWidth="2"
-					strokeDasharray="5,5"
-					vectorEffect="non-scaling-stroke"
-					opacity="0.5"
-				/>
-			</svg>
-
-			{/* Legend */}
-			<div className="absolute top-2 right-2 flex gap-3 md:gap-4 text-[10px] md:text-xs">
-				<div className="flex items-center gap-1">
-					<div className="w-2 md:w-3 h-0.5 bg-primary" />
-					<span className="text-muted-foreground">CPU</span>
+			<div className="h-32 md:h-48 relative">
+				{/* Grid */}
+				<div className="absolute inset-0 grid grid-cols-6 md:grid-cols-12 grid-rows-4 md:grid-rows-6 opacity-20">
+					{Array.from({ length: 24 }, (_, i) => `grid-${i}`).map((key) => (
+						<div key={key} className="border border-border" />
+					))}
 				</div>
-				<div className="flex items-center gap-1">
-					<div className="w-2 md:w-3 h-0.5 bg-foreground opacity-50" />
-					<span className="text-muted-foreground">Memory</span>
-				</div>
-			</div>
 
-			{/* Current values */}
-			<div className="absolute bottom-2 left-2 flex gap-4 text-xs">
-				<span className="text-primary font-mono">
-					CPU: {cpuValues[cpuValues.length - 1]?.toFixed(1) ?? 0}%
-				</span>
-				<span className="text-muted-foreground font-mono">
-					MEM: {memValues[memValues.length - 1]?.toFixed(1) ?? 0}%
-				</span>
+				{/* Lines */}
+				<svg
+					className="absolute inset-0 w-full h-full"
+					viewBox={`0 0 ${width} ${height}`}
+					preserveAspectRatio="none"
+				>
+					<title>System metrics chart</title>
+					<path
+						d={cpuPath}
+						fill="none"
+						stroke="var(--primary)"
+						strokeWidth="2"
+						vectorEffect="non-scaling-stroke"
+					/>
+					<path
+						d={memPath}
+						fill="none"
+						stroke="var(--foreground)"
+						strokeWidth="2"
+						strokeDasharray="5,5"
+						vectorEffect="non-scaling-stroke"
+						opacity="0.5"
+					/>
+				</svg>
 			</div>
 		</div>
 	);
@@ -175,6 +178,7 @@ function MetricsChart({ dataPoints }: { dataPoints: DataPoint[] }) {
 
 export function MetricsPanel() {
 	const { metrics, error, isConnected } = useAdminMetrics();
+	const { data: adminStats } = useAdminStats();
 	const [dataPoints, setDataPoints] = useState<DataPoint[]>([]);
 
 	// Accumulate data points for the chart
@@ -201,7 +205,8 @@ export function MetricsPanel() {
 	}, [metrics]);
 
 	const host = metrics?.host;
-	const activeSessions = metrics?.containers?.length ?? 0;
+	const runningSessions = adminStats?.running_sessions ?? 0;
+	const activeUsers = adminStats?.active_users ?? 0;
 
 	const cpuPercent = host?.cpu_percent ?? 0;
 	const memPercent = host
@@ -230,7 +235,7 @@ export function MetricsPanel() {
 			</div>
 
 			{/* Stats Grid */}
-			<div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 w-full">
+			<div className="grid grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4 w-full">
 				<StatCard
 					label="CPU USAGE"
 					value={`${cpuPercent.toFixed(1)}%`}
@@ -246,15 +251,15 @@ export function MetricsPanel() {
 				/>
 				<StatCard
 					label="ACTIVE SESSIONS"
-					value={activeSessions}
+					value={runningSessions}
 					Icon={Activity}
-					percent={100}
+					percent={adminStats ? (runningSessions / Math.max(adminStats.total_sessions, 1)) * 100 : 0}
 				/>
 				<StatCard
-					label="RUNTIME"
-					value={activeSessions > 0 ? "Active" : "Idle"}
-					Icon={Server}
-					percent={activeSessions > 0 ? 100 : 0}
+					label="ACTIVE USERS"
+					value={activeUsers}
+					Icon={Users}
+					percent={adminStats ? (activeUsers / Math.max(adminStats.total_users, 1)) * 100 : 0}
 				/>
 			</div>
 

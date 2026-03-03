@@ -1,21 +1,39 @@
 {
   "todos": [
     {
-      "id": "fix-login",
-      "content": "Fix login 401 on octo-azure (password reset)",
-      "status": "in_progress",
+      "id": "fix-copy-sw",
+      "content": "Fix cross-user copy for shared workspace workdirs",
+      "status": "completed",
       "priority": "high"
     },
     {
-      "id": "cleanup-outatime",
-      "content": "Clean up OUTATIME test workdir from shared workspace",
-      "status": "in_progress",
+      "id": "member-mgmt",
+      "content": "Improved shared workspace member management dialog",
+      "status": "completed",
       "priority": "high"
     },
     {
-      "id": "debug-sw-visibility",
-      "content": "Debug shared workspaces not showing workdirs",
-      "status": "pending",
+      "id": "sw-runner",
+      "content": "Shared workspace runner provisioning + workdir browsing",
+      "status": "completed",
+      "priority": "high"
+    },
+    {
+      "id": "mmry-ports",
+      "content": "Fix mmry port collisions on octo-azure",
+      "status": "completed",
+      "priority": "medium"
+    },
+    {
+      "id": "test-user",
+      "content": "Created agenttest user for testing",
+      "status": "completed",
+      "priority": "medium"
+    },
+    {
+      "id": "sw-routing",
+      "content": "Route agent commands to shared workspace runner (session.create, list_sessions)",
+      "status": "completed",
       "priority": "high"
     },
     {
@@ -25,5 +43,5 @@
       "priority": "medium"
     }
   ],
-  "updated_at": "2026-03-03T13:26:52.924Z"
+  "updated_at": "2026-03-03T13:56:55.210Z"
 }

@@ -42,6 +42,9 @@ export {
 	useDeleteInviteCode,
 	// Metrics hook
 	useAdminMetrics,
+	// Stats hook
+	type AdminStats,
+	useAdminStats,
 	// EAVS / Model provider hooks
 	type EavsProviderSummary,
 	type EavsModelSummary,

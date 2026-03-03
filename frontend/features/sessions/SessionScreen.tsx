@@ -319,7 +319,7 @@ const TabButton = memo(function TabButton({
 				<Icon className="w-3.5 h-3.5" />
 			</span>
 			{!hideLabel && (
-				<span className="hidden sm:inline ml-1 text-xs">{label}</span>
+				<span className="hidden lg:inline ml-1 text-xs">{label}</span>
 			)}
 			{badge !== undefined && badge > 0 && (
 				<span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-pink-500 text-white text-[10px] rounded-[2px] flex items-center justify-center border-2 border-background">
