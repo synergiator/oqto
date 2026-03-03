@@ -10,7 +10,7 @@ auto_start = false
 idle_timeout_seconds = 0  # Never unload models
 
 [external_api]
-enable = true
+enabled = true
 host = "0.0.0.0"
 port = 8081
 require_api_key = true
@@ -18,7 +18,7 @@ api_key = "${MMRY_API_KEY}"  # Set via environment
 max_input_chars = 32000
 max_batch_size = 128
 request_timeout_seconds = 60
-console_enable = true
+console_enabled = true
 console_redact_secrets = true
 
 [embeddings]

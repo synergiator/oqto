@@ -320,7 +320,7 @@ idle_timeout_seconds = 0
 preload_models = true
 
 [external_api]
-enable = true
+enabled = true
 host = "127.0.0.1"
 port = 8091
 require_api_key = false
