@@ -4,7 +4,7 @@
 # Run `just update-deps` to refresh this manifest from local repos and git tags.
 
 [oqto]
-version = "0.3.15"
+version = "0.3.18"
 description = "Main platform (this repo)"
 
 [byteowlz]
