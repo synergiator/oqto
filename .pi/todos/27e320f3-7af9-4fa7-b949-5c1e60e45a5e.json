@@ -1,23 +1,23 @@
 {
   "todos": [
     {
-      "id": "dd322553",
+      "id": "dc331d0c",
       "content": "Fix chat history reload regression - canonical messages not properly converted to RawMessage",
-      "status": "in_progress",
+      "status": "completed",
       "priority": "high"
     },
     {
-      "id": "058fc405",
-      "content": "Investigate shared workspace creation error",
-      "status": "pending",
+      "id": "f689fd18",
+      "content": "Fix shared workspace not showing in sidebar on octo-azure",
+      "status": "completed",
       "priority": "high"
     },
     {
-      "id": "f5512597",
+      "id": "0c2ee339",
       "content": "Fix yazi-build fallback",
       "status": "pending",
       "priority": "medium"
     }
   ],
-  "updated_at": "2026-03-02T20:20:49.757Z"
+  "updated_at": "2026-03-02T21:12:03.350Z"
 }

@@ -866,6 +866,25 @@ const AppShell = memo(function AppShell() {
 						onLogout={handleLogout}
 						onProjectSelect={handleProjectSelect}
 						onProjectDefaultAgentChange={handleProjectDefaultAgentChange}
+						sharedWorkspaces={sharedWs.sharedWorkspaces}
+						expandedWorkspaces={sharedWs.expandedWorkspaces}
+						toggleWorkspaceExpanded={sharedWs.toggleWorkspaceExpanded}
+						onNewSharedWorkspace={() => {
+							setSwEditTarget(null);
+							setSwError(null);
+							setSwDialogOpen(true);
+						}}
+						onManageWorkspace={(ws) => {
+							setSwEditTarget(ws);
+							setSwError(null);
+							setSwDialogOpen(true);
+						}}
+						onManageMembers={(ws) => setSwMembersTarget(ws)}
+						onNewChatInWorkspace={(ws) => {
+							void createNewChat(ws.path);
+							sidebarState.setMobileMenuOpen(false);
+						}}
+						onDeleteWorkspace={handleDeleteSharedWorkspace}
 					/>
 				)}
 

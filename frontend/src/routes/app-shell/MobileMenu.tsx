@@ -23,6 +23,8 @@ import {
 	type SessionsByProject,
 	SidebarSessions,
 } from "./SidebarSessions";
+import type { SharedWorkspaceInfo } from "@/lib/api/shared-workspaces";
+import { SidebarSharedWorkspaces } from "./SidebarSharedWorkspaces";
 
 const sidebarBg = "var(--sidebar, #181b1a)";
 
@@ -90,6 +92,15 @@ export interface MobileMenuProps {
 	onSessionSearchChange?: (query: string) => void;
 	searchMode?: SearchMode;
 	onSearchModeChange?: (mode: SearchMode) => void;
+	// Shared workspaces
+	sharedWorkspaces?: SharedWorkspaceInfo[];
+	expandedWorkspaces?: Set<string>;
+	toggleWorkspaceExpanded?: (workspaceId: string) => void;
+	onNewSharedWorkspace?: () => void;
+	onManageWorkspace?: (workspace: SharedWorkspaceInfo) => void;
+	onManageMembers?: (workspace: SharedWorkspaceInfo) => void;
+	onNewChatInWorkspace?: (workspace: SharedWorkspaceInfo) => void;
+	onDeleteWorkspace?: (workspace: SharedWorkspaceInfo) => void;
 }
 
 export const MobileMenu = memo(function MobileMenu({
@@ -147,6 +158,14 @@ export const MobileMenu = memo(function MobileMenu({
 	onSessionSearchChange,
 	searchMode,
 	onSearchModeChange,
+	sharedWorkspaces,
+	expandedWorkspaces,
+	toggleWorkspaceExpanded,
+	onNewSharedWorkspace,
+	onManageWorkspace,
+	onManageMembers,
+	onNewChatInWorkspace,
+	onDeleteWorkspace,
 }: MobileMenuProps) {
 	const { t } = useTranslation();
 
@@ -183,6 +202,24 @@ export const MobileMenu = memo(function MobileMenu({
 			</div>
 
 			<nav className="flex-1 w-full px-3 pt-3 flex flex-col min-h-0 overflow-x-hidden">
+				{sharedWorkspaces && sharedWorkspaces.length > 0 && expandedWorkspaces && toggleWorkspaceExpanded && onNewSharedWorkspace && onManageWorkspace && onManageMembers && onNewChatInWorkspace && onDeleteWorkspace && (
+					<>
+						<SidebarSharedWorkspaces
+							sharedWorkspaces={sharedWorkspaces}
+							expandedWorkspaces={expandedWorkspaces}
+							toggleWorkspaceExpanded={toggleWorkspaceExpanded}
+							onNewSharedWorkspace={onNewSharedWorkspace}
+							onManageWorkspace={onManageWorkspace}
+							onManageMembers={onManageMembers}
+							onNewChatInWorkspace={onNewChatInWorkspace}
+							onDeleteWorkspace={onDeleteWorkspace}
+							isMobile
+						/>
+						<div className="w-full px-2 my-1">
+							<div className="h-px w-full bg-sidebar-border/50" />
+						</div>
+					</>
+				)}
 				{chatHistory.length > 0 && (
 					<SidebarSessions
 						locale={locale}
