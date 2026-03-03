@@ -1,7 +1,7 @@
 //! Shared workspace service layer.
 //!
 //! Coordinates database operations, usermgr calls for Linux user creation,
-//! AGENTS.md generation, and access control checks.
+//! USERS.md generation, and access control checks.
 
 use std::sync::Arc;
 
@@ -32,7 +32,7 @@ use super::models::{
     UpdateSharedWorkspaceRequest, WORKSPACE_COLORS, WORKSPACE_ICONS,
 };
 use super::repository::SharedWorkspaceRepository;
-use super::users_md::generate_users_md;
+use super::users_md::{generate_context_json, generate_users_md};
 
 /// Service for managing shared workspaces.
 #[derive(Clone)]
@@ -83,7 +83,7 @@ impl SharedWorkspaceService {
     /// 3. Insert database record
     /// 4. Add creator as owner
     /// 5. Add initial members
-    /// 6. Generate AGENTS.md
+    /// 6. Generate USERS.md
     pub async fn create(
         &self,
         request: &CreateSharedWorkspaceRequest,
@@ -172,9 +172,9 @@ impl SharedWorkspaceService {
             }
         }
 
-        // Generate and write AGENTS.md
+        // Generate and write USERS.md
         if let Err(e) = self.regenerate_users_md(&workspace).await {
-            warn!("failed to generate AGENTS.md for workspace {}: {}", id, e);
+            warn!("failed to generate USERS.md for workspace {}: {}", id, e);
         }
 
         info!(
@@ -320,9 +320,9 @@ impl SharedWorkspaceService {
             )
             .await?;
 
-        // Regenerate AGENTS.md
+        // Regenerate USERS.md
         if let Err(e) = self.regenerate_users_md(&ws).await {
-            warn!("failed to regenerate AGENTS.md: {}", e);
+            warn!("failed to regenerate USERS.md: {}", e);
         }
 
         info!(
@@ -388,9 +388,9 @@ impl SharedWorkspaceService {
             .update_member_role(workspace_id, target_user_id, new_role)
             .await?;
 
-        // Regenerate AGENTS.md
+        // Regenerate USERS.md
         if let Err(e) = self.regenerate_users_md(&ws).await {
-            warn!("failed to regenerate AGENTS.md: {}", e);
+            warn!("failed to regenerate USERS.md: {}", e);
         }
 
         // Broadcast role change to all members
@@ -454,9 +454,9 @@ impl SharedWorkspaceService {
             .remove_member(workspace_id, target_user_id)
             .await?;
 
-        // Regenerate AGENTS.md
+        // Regenerate USERS.md
         if let Err(e) = self.regenerate_users_md(&ws).await {
-            warn!("failed to regenerate AGENTS.md: {}", e);
+            warn!("failed to regenerate USERS.md: {}", e);
         }
 
         info!(
@@ -670,26 +670,61 @@ impl SharedWorkspaceService {
         Ok(())
     }
 
-    /// Regenerate AGENTS.md at the workspace root with team member info.
+    /// Regenerate USERS.md and .pi/context.json in every workdir of this workspace.
     ///
-    /// Pi auto-loads AGENTS.md from parent directories, so placing this at the
-    /// workspace root ensures every workdir session knows the team context.
+    /// USERS.md contains team member info. .pi/context.json tells the
+    /// custom-context-files Pi extension to auto-load USERS.md into context.
     pub async fn regenerate_users_md(&self, workspace: &SharedWorkspace) -> Result<()> {
         let members = self.repo.list_members(&workspace.id).await?;
-        let content = generate_users_md(&workspace.name, &members);
+        let users_md = generate_users_md(&workspace.name, &members);
+        let context_json = generate_context_json();
 
-        let agents_md_path = format!("{}/AGENTS.md", workspace.path);
+        let ws_path = std::path::Path::new(&workspace.path);
+        if !ws_path.exists() {
+            tracing::debug!(
+                workspace_id = %workspace.id,
+                path = %workspace.path,
+                "workspace root does not exist yet, skipping USERS.md generation"
+            );
+            return Ok(());
+        }
 
-        // Write to filesystem -- in multi-user mode this needs to run as the shared user.
-        // For now, write directly (works in single-user mode and when oqto has group access).
-        std::fs::write(&agents_md_path, &content)
-            .with_context(|| format!("writing AGENTS.md to {}", agents_md_path))?;
+        let mut count = 0;
+        for entry in std::fs::read_dir(ws_path)
+            .with_context(|| format!("reading workspace dir {}", workspace.path))?
+        {
+            let entry = entry?;
+            let path = entry.path();
+            if !path.is_dir() {
+                continue;
+            }
+            let name = entry.file_name();
+            let name_str = name.to_string_lossy();
+            // Skip hidden dirs (.pi, .oqto, etc.)
+            if name_str.starts_with('.') {
+                continue;
+            }
+            // This is a workdir -- write USERS.md
+            let users_md_path = path.join("USERS.md");
+            std::fs::write(&users_md_path, &users_md)
+                .with_context(|| format!("writing {}", users_md_path.display()))?;
+
+            // Write .pi/context.json
+            let pi_dir = path.join(".pi");
+            std::fs::create_dir_all(&pi_dir)
+                .with_context(|| format!("creating {}", pi_dir.display()))?;
+            let context_json_path = pi_dir.join("context.json");
+            std::fs::write(&context_json_path, &context_json)
+                .with_context(|| format!("writing {}", context_json_path.display()))?;
+
+            count += 1;
+        }
 
         info!(
             workspace_id = %workspace.id,
-            path = %agents_md_path,
+            workdirs = count,
             members = members.len(),
-            "regenerated workspace AGENTS.md with team info"
+            "regenerated USERS.md + .pi/context.json in workdirs"
         );
         Ok(())
     }
@@ -733,7 +768,7 @@ impl SharedWorkspaceService {
     ///
     /// 1. Create shared workspace (linux user, DB record)
     /// 2. Copy project files to the shared workspace using usermgr
-    /// 3. Generate AGENTS.md
+    /// 3. Generate USERS.md
     pub async fn convert_to_shared(
         &self,
         request: &ConvertToSharedRequest,
@@ -813,7 +848,7 @@ impl SharedWorkspaceService {
             .transfer_ownership(workspace_id, user_id, &request.new_owner_id)
             .await?;
 
-        // Update AGENTS.md
+        // Update USERS.md
         let ws = self.repo.get_by_id(workspace_id).await?;
         if let Some(ref ws) = ws {
             self.regenerate_users_md(ws).await?;
@@ -878,7 +913,7 @@ impl SharedWorkspaceService {
             .remove_member(workspace_id, target_user_id)
             .await?;
 
-        // Regenerate AGENTS.md
+        // Regenerate USERS.md
         let ws = self.repo.get_by_id(workspace_id).await?;
         if let Some(ref ws) = ws {
             self.regenerate_users_md(ws).await?;
@@ -974,6 +1009,18 @@ impl SharedWorkspaceService {
             }),
         )
         .with_context(|| format!("setting up runner for shared workspace user {}", username))?;
+
+        // Install Pi extensions (custom-context-files loads USERS.md)
+        if let Err(e) = crate::local::linux_users::usermgr_request(
+            "install-pi-extensions",
+            serde_json::json!({ "username": username }),
+        ) {
+            warn!(
+                linux_user = %username,
+                error = %e,
+                "failed to install Pi extensions for shared workspace user (non-fatal)"
+            );
+        }
 
         info!(
             linux_user = %username,

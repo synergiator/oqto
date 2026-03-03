@@ -2,14 +2,20 @@
   "todos": [
     {
       "id": "fix-routing",
-      "content": "Fix session routing: shared workspace sessions must route to SW runner directly, not fallback loop",
+      "content": "Fix session routing: shared workspace sessions must route to SW runner directly",
       "status": "completed",
       "priority": "high"
     },
     {
       "id": "users-md",
-      "content": "Add USERS.md to shared workdirs and configure pi extension to auto-load it",
+      "content": "Write USERS.md + .pi/context.json into each workdir, revert workspace-root AGENTS.md",
       "status": "in_progress",
+      "priority": "high"
+    },
+    {
+      "id": "ext-install",
+      "content": "Ensure custom-context-files extension is installed for shared workspace users",
+      "status": "pending",
       "priority": "high"
     },
     {
@@ -19,5 +25,5 @@
       "priority": "medium"
     }
   ],
-  "updated_at": "2026-03-03T19:19:47.712Z"
+  "updated_at": "2026-03-03T19:56:09.706Z"
 }

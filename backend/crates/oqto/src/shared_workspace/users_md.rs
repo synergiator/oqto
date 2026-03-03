@@ -1,24 +1,19 @@
-//! AGENTS.md generation for shared workspace roots.
+//! USERS.md generation for shared workspace workdirs.
 //!
-//! Generates an AGENTS.md document for the workspace root that Pi auto-loads
-//! (Pi walks parent directories for AGENTS.md). This gives the agent context
-//! about team members and shared workspace conventions.
+//! Generates a USERS.md document placed in each workdir so the agent knows
+//! team members. Loaded by the custom-context-files Pi extension via
+//! .pi/context.json in each workdir.
 
 use super::models::SharedWorkspaceMemberInfo;
 
-/// Generate AGENTS.md content for a shared workspace root.
-///
-/// Pi automatically loads AGENTS.md from parent directories when working in a
-/// workdir. Since each workdir is a subdirectory of the workspace root, placing
-/// AGENTS.md there ensures the agent always knows the team context.
+/// Generate USERS.md content for a shared workspace workdir.
 pub fn generate_users_md(workspace_name: &str, members: &[SharedWorkspaceMemberInfo]) -> String {
     let mut md = String::new();
 
-    md.push_str(&format!("# {} - Shared Workspace\n\n", workspace_name));
-    md.push_str("This is a shared workspace. Multiple users collaborate on projects here.\n");
+    md.push_str(&format!("# {} - Team\n\n", workspace_name));
+    md.push_str("This is a shared workspace. Multiple users collaborate here.\n");
     md.push_str("Messages are prefixed with the sender's name in square brackets, e.g. `[Alice] hello`.\n\n");
 
-    md.push_str("## Team\n\n");
     md.push_str("| Name | Role |\n");
     md.push_str("|------|------|\n");
 
@@ -29,12 +24,25 @@ pub fn generate_users_md(workspace_name: &str, members: &[SharedWorkspaceMemberI
         ));
     }
 
-    md.push_str("\n## Conventions\n\n");
-    md.push_str("- Address users by name when responding to their specific requests.\n");
+    md.push_str("\n- Address users by name when responding to their specific requests.\n");
     md.push_str("- All members can see the full conversation history.\n");
     md.push_str("- If users give conflicting instructions, ask for clarification.\n");
 
     md
+}
+
+/// Generate .pi/context.json content that tells the custom-context-files
+/// extension to load USERS.md.
+pub fn generate_context_json() -> String {
+    serde_json::json!({
+        "contextFiles": [
+            {
+                "names": ["USERS.md"],
+                "optional": false
+            }
+        ]
+    })
+    .to_string()
 }
 
 #[cfg(test)]
@@ -65,9 +73,17 @@ mod tests {
 
         let md = generate_users_md("Team Alpha", &members);
 
-        assert!(md.contains("# Team Alpha - Shared Workspace"));
+        assert!(md.contains("# Team Alpha - Team"));
         assert!(md.contains("| Alice Smith | owner |"));
         assert!(md.contains("| Bob Jones | member |"));
         assert!(md.contains("conflicting instructions"));
+    }
+
+    #[test]
+    fn test_generate_context_json() {
+        let json = generate_context_json();
+        let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed["contextFiles"][0]["names"][0], "USERS.md");
+        assert_eq!(parsed["contextFiles"][0]["optional"], false);
     }
 }
