@@ -38,6 +38,15 @@ setup.sh must correctly provision everything for a new platform user on a fresh 
 ...
 
 
+### [oqto-00ay] Update mmry config: rename external_api.enable -> enabled, console_enable -> console_enabled (P1, task)
+mmry breaking change (mmry-ypv4): ExternalApiConfig fields renamed for consistency.
+
+Files to update:
+- deploy/systemd/mmry-embeddings.config.toml: enable -> enabled, console_enable -> console_enabled
+- backend/crates/oqto/src/local/linux_users.rs:690: change "enable" key to "enabled"
+...
+
+
 ### [oqto-zkyq] Canonical history migration (server-side) (P1, feature)
 
 ### [oqto-q5yb] Credential proxy on oqto-runner: secret-aware API proxying via kyz (P1, feature)
