@@ -219,6 +219,7 @@ fn dispatch(req: &Request) -> Response {
         "write-file" => cmd_write_file(&req.args),
         "restart-service" => cmd_restart_service(&req.args),
         "run-as-user" => cmd_run_as_user(&req.args),
+        "copy-dir" => cmd_copy_dir(&req.args),
         "fix-socket-dir" => cmd_fix_socket_dir(&req.args),
         "verify-socket-dirs" => cmd_verify_socket_dirs(&req.args),
         "ping" => Response::success(),
@@ -1700,6 +1701,61 @@ fn fix_socket_base_dirs() -> Result<(), String> {
         .map_err(|e| format!("chmod {sockets_base}: {e}"))?;
 
     Ok(())
+}
+
+/// Copy a directory from one location to another, running as root.
+/// Then chown the destination to the specified owner.
+/// Used for cross-user copies (e.g. personal project -> shared workspace).
+///
+/// Args: { "source": "/path/src", "dest": "/path/dst", "owner": "user:group" }
+fn cmd_copy_dir(args: &serde_json::Value) -> Response {
+    let source = match get_str(args, "source") {
+        Ok(s) => s,
+        Err(r) => return r,
+    };
+    let dest = match get_str(args, "dest") {
+        Ok(s) => s,
+        Err(r) => return r,
+    };
+    let owner = match get_str(args, "owner") {
+        Ok(s) => s,
+        Err(r) => return r,
+    };
+
+    // Validate paths
+    if let Err(e) = validate_path(source, ALLOWED_PATH_PREFIXES) {
+        return Response::error(format!("source: {e}"));
+    }
+    if let Err(e) = validate_path(dest, ALLOWED_PATH_PREFIXES) {
+        return Response::error(format!("dest: {e}"));
+    }
+
+    // Source must exist and be a directory
+    let source_path = std::path::Path::new(source);
+    if !source_path.exists() || !source_path.is_dir() {
+        return Response::error(format!("source is not an existing directory: {source}"));
+    }
+    // Dest must not already exist
+    if std::path::Path::new(dest).exists() {
+        return Response::error(format!("destination already exists: {dest}"));
+    }
+
+    // Copy: cp -a source dest
+    if let Err(e) = run_cmd("/usr/bin/cp", &["-a", source, dest]) {
+        return Response::error(format!("cp -a failed: {e}"));
+    }
+
+    // Chown recursively
+    if let Err(e) = run_cmd("/usr/bin/chown", &["-R", owner, dest]) {
+        return Response::error(format!("chown failed: {e}"));
+    }
+
+    // Set SGID on the directory
+    if let Err(e) = run_cmd("/usr/bin/chmod", &["2770", dest]) {
+        return Response::error(format!("chmod failed: {e}"));
+    }
+
+    Response::success()
 }
 
 fn cmd_run_as_user(args: &serde_json::Value) -> Response {

@@ -15,12 +15,18 @@
     {
       "id": "move-sw",
       "content": "Move shared workspaces below search bar (desktop + mobile)",
-      "status": "in_progress",
+      "status": "completed",
       "priority": "high"
     },
     {
       "id": "fix-sw-newchat",
-      "content": "Fix shared workspace + button creating session in wrong workdir",
+      "content": "Fix shared workspace + button: now opens New Project dialog with workspace path",
+      "status": "completed",
+      "priority": "high"
+    },
+    {
+      "id": "fix-copy-sw",
+      "content": "Fix shared workspace workdir model: copy into ws, enforce min 1 workdir, fix validate_workspace_path for shared paths",
       "status": "in_progress",
       "priority": "high"
     },
@@ -31,5 +37,5 @@
       "priority": "medium"
     }
   ],
-  "updated_at": "2026-03-03T11:03:36.307Z"
+  "updated_at": "2026-03-03T11:20:31.680Z"
 }

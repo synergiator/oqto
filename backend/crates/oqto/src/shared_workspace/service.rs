@@ -584,27 +584,18 @@ impl SharedWorkspaceService {
         }
 
         if multi_user {
+            // Use copy-dir (runs as root) for cross-user copies.
+            // The source user's files are not readable by the shared workspace user,
+            // so we need root privileges to copy then chown.
             crate::local::linux_users::usermgr_request(
-                "run-as-user",
+                "copy-dir",
                 serde_json::json!({
-                    "username": ws.linux_user,
-                    "binary": "cp",
-                    "args": ["-a", source, &dest],
-                    "cwd": &ws.path,
+                    "source": source,
+                    "dest": &dest,
+                    "owner": format!("{}:oqto", ws.linux_user),
                 }),
             )
             .with_context(|| format!("copying {} to shared workspace {}", source, dest))?;
-
-            crate::local::linux_users::usermgr_request(
-                "run-as-user",
-                serde_json::json!({
-                    "username": ws.linux_user,
-                    "binary": "chown",
-                    "args": ["-R", &format!("{}:oqto", ws.linux_user), &dest],
-                    "cwd": &ws.path,
-                }),
-            )
-            .with_context(|| format!("fixing ownership of {}", dest))?;
         } else {
             let dest_path = std::path::Path::new(&dest);
             copy_dir_recursive(source_path, dest_path)
@@ -761,29 +752,16 @@ impl SharedWorkspaceService {
         let dest = format!("{}/{}", workspace.path, project_name);
 
         if multi_user {
-            // Use usermgr to copy files with correct ownership
+            // Use copy-dir (runs as root) for cross-user copies.
             crate::local::linux_users::usermgr_request(
-                "run-as-user",
+                "copy-dir",
                 serde_json::json!({
-                    "username": workspace.linux_user,
-                    "binary": "cp",
-                    "args": ["-a", source, &dest],
-                    "cwd": &workspace.path,
+                    "source": source,
+                    "dest": &dest,
+                    "owner": format!("{}:oqto", workspace.linux_user),
                 }),
             )
             .with_context(|| format!("copying {} to shared workspace {}", source, dest))?;
-
-            // Fix ownership
-            crate::local::linux_users::usermgr_request(
-                "run-as-user",
-                serde_json::json!({
-                    "username": workspace.linux_user,
-                    "binary": "chown",
-                    "args": ["-R", &format!("{}:oqto", workspace.linux_user), &dest],
-                    "cwd": &workspace.path,
-                }),
-            )
-            .with_context(|| format!("fixing ownership of {}", dest))?;
         } else {
             // Single-user mode: direct copy
             let src_path = std::path::Path::new(source);
