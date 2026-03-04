@@ -724,9 +724,20 @@ impl RunnerClient {
 
     /// Send a steering message to interrupt a Pi session mid-run.
     pub async fn pi_steer(&self, session_id: &str, message: &str) -> Result<()> {
+        self.pi_steer_with_client_id(session_id, message, None).await
+    }
+
+    /// Send a steering message with a client_id for optimistic message matching.
+    pub async fn pi_steer_with_client_id(
+        &self,
+        session_id: &str,
+        message: &str,
+        client_id: Option<String>,
+    ) -> Result<()> {
         let req = RunnerRequest::PiSteer(PiSteerRequest {
             session_id: session_id.to_string(),
             message: message.to_string(),
+            client_id,
         });
 
         let resp = self.request(&req).await?;
@@ -738,9 +749,20 @@ impl RunnerClient {
 
     /// Queue a follow-up message for after the Pi session finishes.
     pub async fn pi_follow_up(&self, session_id: &str, message: &str) -> Result<()> {
+        self.pi_follow_up_with_client_id(session_id, message, None).await
+    }
+
+    /// Queue a follow-up message with a client_id for optimistic message matching.
+    pub async fn pi_follow_up_with_client_id(
+        &self,
+        session_id: &str,
+        message: &str,
+        client_id: Option<String>,
+    ) -> Result<()> {
         let req = RunnerRequest::PiFollowUp(PiFollowUpRequest {
             session_id: session_id.to_string(),
             message: message.to_string(),
+            client_id,
         });
 
         let resp = self.request(&req).await?;

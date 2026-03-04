@@ -1752,25 +1752,27 @@ async fn handle_agent_command(
             }
         }
 
-        CommandPayload::Steer { message } => {
+        CommandPayload::Steer { message, client_id } => {
             let effective_message = tag_shared_workspace_message(
                 state, &conn_state, &session_id, user_id, &message,
             )
             .await;
             info!(
-                "agent steer: user={}, session_id={}, len={}",
+                "agent steer: user={}, session_id={}, len={}, client_id={:?}",
                 user_id,
                 session_id,
-                effective_message.len()
+                effective_message.len(),
+                client_id
             );
-            match runner.pi_steer(&session_id, &effective_message).await {
+            let client_id_for_broadcast = client_id.clone();
+            match runner.pi_steer_with_client_id(&session_id, &effective_message, client_id).await {
                 Ok(()) => {
                     broadcast_user_message(
                         state,
                         &session_id,
                         user_id,
                         &effective_message,
-                        None,
+                        client_id_for_broadcast,
                     )
                     .await;
                     None
@@ -1784,25 +1786,27 @@ async fn handle_agent_command(
             }
         }
 
-        CommandPayload::FollowUp { message } => {
+        CommandPayload::FollowUp { message, client_id } => {
             let effective_message = tag_shared_workspace_message(
                 state, &conn_state, &session_id, user_id, &message,
             )
             .await;
             info!(
-                "agent follow_up: user={}, session_id={}, len={}",
+                "agent follow_up: user={}, session_id={}, len={}, client_id={:?}",
                 user_id,
                 session_id,
-                effective_message.len()
+                effective_message.len(),
+                client_id
             );
-            match runner.pi_follow_up(&session_id, &effective_message).await {
+            let client_id_for_broadcast = client_id.clone();
+            match runner.pi_follow_up_with_client_id(&session_id, &effective_message, client_id).await {
                 Ok(()) => {
                     broadcast_user_message(
                         state,
                         &session_id,
                         user_id,
                         &effective_message,
-                        None,
+                        client_id_for_broadcast,
                     )
                     .await;
                     None

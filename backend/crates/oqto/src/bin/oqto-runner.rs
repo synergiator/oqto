@@ -2371,12 +2371,17 @@ impl Runner {
     /// Send a steering message to interrupt a Pi session.
     async fn pi_steer(&self, req: PiSteerRequest) -> RunnerResponse {
         debug!(
-            "pi_steer: session_id={}, message_len={}",
+            "pi_steer: session_id={}, message_len={}, client_id={:?}",
             req.session_id,
-            req.message.len()
+            req.message.len(),
+            req.client_id,
         );
 
-        match self.pi_manager.steer(&req.session_id, &req.message).await {
+        match self
+            .pi_manager
+            .steer_with_client_id(&req.session_id, &req.message, req.client_id)
+            .await
+        {
             Ok(()) => RunnerResponse::PiCommandAck {
                 session_id: req.session_id,
             },
@@ -2390,14 +2395,15 @@ impl Runner {
     /// Queue a follow-up message for a Pi session.
     async fn pi_follow_up(&self, req: PiFollowUpRequest) -> RunnerResponse {
         debug!(
-            "pi_follow_up: session_id={}, message_len={}",
+            "pi_follow_up: session_id={}, message_len={}, client_id={:?}",
             req.session_id,
-            req.message.len()
+            req.message.len(),
+            req.client_id,
         );
 
         match self
             .pi_manager
-            .follow_up(&req.session_id, &req.message)
+            .follow_up_with_client_id(&req.session_id, &req.message, req.client_id)
             .await
         {
             Ok(()) => RunnerResponse::PiCommandAck {

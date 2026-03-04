@@ -187,9 +187,15 @@ pub enum PiSessionCommand {
         client_id: Option<String>,
     },
     /// Send a steering message (interrupt mid-run).
-    Steer(String),
+    Steer {
+        message: String,
+        client_id: Option<String>,
+    },
     /// Send a follow-up message (queue for after completion).
-    FollowUp(String),
+    FollowUp {
+        message: String,
+        client_id: Option<String>,
+    },
     /// Abort current operation.
     Abort,
 
@@ -857,14 +863,60 @@ impl PiSessionManager {
 
     /// Send a steering message to a session.
     pub async fn steer(&self, session_id: &str, message: &str) -> Result<()> {
-        self.send_command(session_id, PiSessionCommand::Steer(message.to_string()))
-            .await
+        self.send_command(
+            session_id,
+            PiSessionCommand::Steer {
+                message: message.to_string(),
+                client_id: None,
+            },
+        )
+        .await
+    }
+
+    /// Send a steering message with client_id to a session.
+    pub async fn steer_with_client_id(
+        &self,
+        session_id: &str,
+        message: &str,
+        client_id: Option<String>,
+    ) -> Result<()> {
+        self.send_command(
+            session_id,
+            PiSessionCommand::Steer {
+                message: message.to_string(),
+                client_id,
+            },
+        )
+        .await
     }
 
     /// Send a follow-up message to a session.
     pub async fn follow_up(&self, session_id: &str, message: &str) -> Result<()> {
-        self.send_command(session_id, PiSessionCommand::FollowUp(message.to_string()))
-            .await
+        self.send_command(
+            session_id,
+            PiSessionCommand::FollowUp {
+                message: message.to_string(),
+                client_id: None,
+            },
+        )
+        .await
+    }
+
+    /// Send a follow-up message with client_id to a session.
+    pub async fn follow_up_with_client_id(
+        &self,
+        session_id: &str,
+        message: &str,
+        client_id: Option<String>,
+    ) -> Result<()> {
+        self.send_command(
+            session_id,
+            PiSessionCommand::FollowUp {
+                message: message.to_string(),
+                client_id,
+            },
+        )
+        .await
     }
 
     /// Abort current operation in a session.
@@ -2367,7 +2419,7 @@ impl PiSessionManager {
                     );
                 }
             }
-            PiSessionCommand::FollowUp(_) | PiSessionCommand::Steer(_) => {
+            PiSessionCommand::FollowUp { .. } | PiSessionCommand::Steer { .. } => {
                 if !(is_idle || is_starting || is_streaming) {
                     anyhow::bail!(
                         "Session '{}' not ready for steer/follow_up (state={})",
@@ -3166,7 +3218,9 @@ impl PiSessionManager {
                     };
                     Self::write_command(&mut stdin, &pi_cmd).await
                 }
-                PiSessionCommand::Steer(msg) => {
+                PiSessionCommand::Steer { message: msg, client_id } => {
+                    // Store client_id for hstry persistence (same as Prompt).
+                    *pending_client_id.write().await = client_id;
                     // The runner decides how to deliver based on session state:
                     // - Streaming: send as steer (interrupt mid-run)
                     // - Idle/Starting/Stopping/Aborting: send as prompt (new turn or zombie session)
@@ -3198,7 +3252,9 @@ impl PiSessionManager {
                     };
                     Self::write_command(&mut stdin, &pi_cmd).await
                 }
-                PiSessionCommand::FollowUp(msg) => {
+                PiSessionCommand::FollowUp { message: msg, client_id } => {
+                    // Store client_id for hstry persistence (same as Prompt).
+                    *pending_client_id.write().await = client_id;
                     // The runner decides how to deliver based on session state:
                     // - Streaming: send as follow_up (queued until done)
                     // - Idle/Starting/Stopping/Aborting: send as prompt (new turn or zombie session)

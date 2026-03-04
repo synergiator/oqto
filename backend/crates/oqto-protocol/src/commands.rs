@@ -77,10 +77,20 @@ pub enum CommandPayload {
     },
 
     /// Steering message (interrupt mid-run).
-    Steer { message: String },
+    Steer {
+        message: String,
+        /// Client-generated ID for optimistic message matching.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        client_id: Option<String>,
+    },
 
     /// Follow-up message (queued for after current run).
-    FollowUp { message: String },
+    FollowUp {
+        message: String,
+        /// Client-generated ID for optimistic message matching.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        client_id: Option<String>,
+    },
 
     /// Abort current operation.
     Abort,

@@ -608,15 +608,31 @@ class WsConnectionManager {
 	/**
 	 * Send a steering message to an agent session.
 	 */
-	agentSteer(sessionId: string, message: string, id?: string): void {
-		this.enqueueOrSendAgentMessage(sessionId, "steer", message, id);
+	agentSteer(
+		sessionId: string,
+		message: string,
+		id?: string,
+		clientId?: string,
+	): void {
+		this.enqueueOrSendAgentMessage(sessionId, "steer", message, id, clientId);
 	}
 
 	/**
 	 * Send a follow-up message to an agent session.
 	 */
-	agentFollowUp(sessionId: string, message: string, id?: string): void {
-		this.enqueueOrSendAgentMessage(sessionId, "follow_up", message, id);
+	agentFollowUp(
+		sessionId: string,
+		message: string,
+		id?: string,
+		clientId?: string,
+	): void {
+		this.enqueueOrSendAgentMessage(
+			sessionId,
+			"follow_up",
+			message,
+			id,
+			clientId,
+		);
 	}
 
 	/**

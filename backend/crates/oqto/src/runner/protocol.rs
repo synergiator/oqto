@@ -847,6 +847,9 @@ pub struct PiSteerRequest {
     pub session_id: String,
     /// Steering message content.
     pub message: String,
+    /// Client-generated ID for optimistic message matching.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub client_id: Option<String>,
 }
 
 /// Request to abort a Pi session's current operation.
@@ -927,6 +930,9 @@ pub struct PiFollowUpRequest {
     pub session_id: String,
     /// Follow-up message content.
     pub message: String,
+    /// Client-generated ID for optimistic message matching.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub client_id: Option<String>,
 }
 
 /// Request to get all messages from a Pi session.
