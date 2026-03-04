@@ -2899,11 +2899,17 @@ impl PiSessionManager {
                                                 let rid = runner_id.clone();
                                                 let wd = work_dir.clone();
                                                 let lock = hstry_persist_lock.clone();
+                                                // Read pending_client_id without taking it.
+                                                // If client_id was set (e.g., from a Prompt),
+                                                // we include it so the hstry upsert doesn't
+                                                // overwrite an existing client_id with NULL.
+                                                let pcid = Arc::clone(&pending_client_id);
                                                 tokio::spawn(async move {
                                                     let _guard = lock.lock().await;
+                                                    let cid = pcid.read().await.clone();
                                                     if let Err(e) = Self::persist_to_hstry_grpc(
                                                         &client, &eid, &sid, &rid, &messages, &wd,
-                                                        None, // no client_id for incremental
+                                                        cid,
                                                     )
                                                     .await
                                                     {
