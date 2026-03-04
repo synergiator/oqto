@@ -278,6 +278,10 @@ export const MobileMenu = memo(function MobileMenu({
 										busySessions={busySessions}
 										selectedChatSessionId={selectedChatSessionId}
 										onSessionClick={onSharedSessionClick}
+										onRenameSession={onRenameSession}
+										onDeleteSession={onDeleteSession}
+										onPinSession={onPinSession}
+										pinnedSessions={pinnedSessions}
 										isMobile
 									/>
 									<div className="w-full px-2 my-1">

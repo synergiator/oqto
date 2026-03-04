@@ -73,6 +73,7 @@ export interface ChatContextValue {
 		sessionId: string,
 		workspacePath?: string,
 		sharedWorkspaceId?: string,
+		existingSession?: ChatSession,
 	) => string;
 	/** Remove a placeholder chat session. */
 	clearOptimisticChatSession: (sessionId: string) => void;
@@ -150,7 +151,7 @@ const defaultChatContext: ChatContextValue = {
 	runnerSessions: [],
 	runnerSessionCount: 0,
 	refreshChatHistory: asyncNoopVoid,
-	createOptimisticChatSession: (_sessionId?: string, _workspacePath?: string, _sharedWorkspaceId?: string) => "",
+	createOptimisticChatSession: (_sessionId?: string, _workspacePath?: string, _sharedWorkspaceId?: string, _existingSession?: ChatSession) => "",
 	clearOptimisticChatSession: noop,
 	replaceOptimisticChatSession: noop,
 	updateChatSessionTitleLocal: noop,
@@ -318,7 +319,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 			const byId = new Map(history.map((s) => [s.id, s]));
 			const byReadable = new Map(
 				history
-					.filter((s) => s.readable_id?.trim())
+					.filter((s): s is ChatSession & { readable_id: string } => !!s.readable_id?.trim())
 					.map((s) => [s.readable_id.trim(), s]),
 			);
 
@@ -586,7 +587,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 	}, []);
 
 	const createOptimisticChatSession = useCallback(
-		(sessionId: string, workspacePath?: string, sharedWorkspaceId?: string) => {
+		(sessionId: string, workspacePath?: string, sharedWorkspaceId?: string, existingSession?: ChatSession) => {
 			const optimisticId = sessionId;
 			if (optimisticChatSessionsRef.current.has(optimisticId)) {
 				return optimisticId;
@@ -610,24 +611,41 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 				sharedWorkspaceSessionMap.set(optimisticId, sharedWorkspaceId);
 			}
 
-			const session: ChatSession = {
-				id: optimisticId,
-				readable_id: null,
-				title: t("sessions.newSession"),
-				parent_id: null,
-				workspace_path: resolvedPath ?? null,
-				project_name: derivedProjectName,
-				created_at: Date.now(),
-				updated_at: Date.now(),
-				version: 1,
-				is_child: false,
-				source_path: null,
-				shared_workspace_id: sharedWorkspaceId ?? null,
-			};
+			// If an existing session was provided (e.g. clicking an existing
+			// shared workspace session), carry over its full metadata so
+			// the chat header shows the correct title, readable_id, etc.
+			const session: ChatSession = existingSession
+				? {
+						...existingSession,
+						shared_workspace_id: sharedWorkspaceId ?? existingSession.shared_workspace_id ?? null,
+					}
+				: {
+						id: optimisticId,
+						readable_id: null,
+						title: t("sessions.newSession"),
+						parent_id: null,
+						workspace_path: resolvedPath ?? null,
+						project_name: derivedProjectName,
+						created_at: Date.now(),
+						updated_at: Date.now(),
+						version: null,
+						is_child: false,
+						source_path: null,
+						shared_workspace_id: sharedWorkspaceId ?? null,
+					};
 			optimisticChatSessionsRef.current.set(optimisticId, session);
 			optimisticSelectionRef.current.set(optimisticId, selectedChatSessionId);
 			startTransition(() => {
-				setChatHistory((prev) => [session, ...prev]);
+				setChatHistory((prev) => {
+					// If the session already exists, update it in-place
+					const idx = prev.findIndex((s) => s.id === optimisticId);
+					if (idx >= 0) {
+						const updated = [...prev];
+						updated[idx] = session;
+						return updated;
+					}
+					return [session, ...prev];
+				});
 			});
 			return optimisticId;
 		},
@@ -763,7 +781,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 				const updated = await updateChatSession(sessionId, { title });
 				// Mark this session as manually renamed so auto-generated
 				// title events from Pi don't overwrite the user's choice.
-				manuallyRenamedRef.current.set(sessionId, updated.title);
+				if (updated.title) manuallyRenamedRef.current.set(sessionId, updated.title);
 				setChatHistory((prev) =>
 					prev.map((s) =>
 						s.id === sessionId ? { ...s, title: updated.title } : s,
@@ -776,7 +794,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 				try {
 					const manager = getWsManager();
 					if (manager.isConnected) {
-						void manager.agentSetSessionName(sessionId, updated.title);
+						void manager.agentSetSessionName(sessionId, updated.title ?? "");
 					}
 				} catch {
 					// Best-effort -- runner notification is not critical

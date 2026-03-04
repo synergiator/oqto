@@ -20,17 +20,21 @@ import { listChatHistory } from "@/lib/api/chat";
 import type { ChatSession } from "@/lib/api/chat";
 import {
 	formatSessionDate,
+	formatTempId,
 	getDisplayPiTitle,
+	getTempIdFromSession,
 } from "@/lib/session-utils";
 import { cn } from "@/lib/utils";
 import {
 	ChevronDown,
 	ChevronRight,
+	Copy,
 	FolderKanban,
 	FolderPlus,
 	Loader2,
 	MessageSquare,
 	Pencil,
+	Pin,
 	Plus,
 	Settings,
 	Trash2,
@@ -66,6 +70,10 @@ export interface SidebarSharedWorkspacesProps {
 	busySessions?: Set<string>;
 	selectedChatSessionId: string | null;
 	onSessionClick?: (session: ChatSession, sharedWorkspaceId: string) => void;
+	onRenameSession?: (sessionId: string) => void;
+	onDeleteSession?: (sessionId: string) => void;
+	onPinSession?: (sessionId: string) => void;
+	pinnedSessions?: Set<string>;
 	isMobile?: boolean;
 }
 
@@ -79,6 +87,10 @@ function WorkspaceContent({
 	busySessions,
 	selectedChatSessionId,
 	onSessionClick,
+	onRenameSession,
+	onDeleteSession,
+	onPinSession,
+	pinnedSessions,
 	expandedFolders,
 	toggleFolderExpanded,
 }: {
@@ -93,6 +105,10 @@ function WorkspaceContent({
 	busySessions?: Set<string>;
 	selectedChatSessionId: string | null;
 	onSessionClick?: (session: ChatSession, sharedWorkspaceId: string) => void;
+	onRenameSession?: (sessionId: string) => void;
+	onDeleteSession?: (sessionId: string) => void;
+	onPinSession?: (sessionId: string) => void;
+	pinnedSessions?: Set<string>;
 	expandedFolders: Set<string>;
 	toggleFolderExpanded: (key: string) => void;
 }) {
@@ -277,61 +293,119 @@ function WorkspaceContent({
 									const formattedDate = session.updated_at
 										? formatSessionDate(session.updated_at)
 										: null;
+									const tempId = formatTempId(getTempIdFromSession(session));
+									const isPinned = pinnedSessions?.has(session.id);
 
 									return (
 										<div
 											key={session.id}
 											className={isMobile ? "ml-4" : "ml-3"}
 										>
-											<div
-												className={cn(
-													"w-full px-2 text-left transition-colors flex items-start gap-1.5 cursor-pointer",
-													isMobile ? "py-2" : "py-1",
-													isSelected
-														? "bg-primary/15 border border-primary text-foreground"
-														: "text-muted-foreground hover:bg-sidebar-accent border border-transparent",
-												)}
-												onClick={() => onSessionClick?.(session, workspace.id)}
-												onKeyDown={(e) => {
-													if (e.key === "Enter" || e.key === " ") {
-														onSessionClick?.(session, workspace.id);
-													}
-												}}
-												role="button"
-												tabIndex={0}
-											>
-												<MessageSquare
-													className={cn(
-														"mt-0.5 flex-shrink-0 text-primary/70",
-														isMobile ? "w-4 h-4" : "w-3 h-3",
-													)}
-												/>
-												<div className="flex-1 min-w-0 text-left">
-													<div className="flex items-center gap-1">
-														<span
-															className={cn(
-																"truncate font-medium",
-																sizeClasses.sessionText,
-															)}
-														>
-															{getDisplayPiTitle(session)}
-														</span>
-														{isBusy && (
-															<Loader2 className="w-3 h-3 flex-shrink-0 text-primary animate-spin" />
+											<ContextMenu>
+												<ContextMenuTrigger asChild>
+													<div
+														className={cn(
+															"w-full px-2 text-left transition-colors flex items-start gap-1.5 cursor-pointer",
+															isMobile ? "py-2" : "py-1",
+															isSelected
+																? "bg-primary/15 border border-primary text-foreground"
+																: "text-muted-foreground hover:bg-sidebar-accent border border-transparent",
 														)}
-													</div>
-													{formattedDate && (
-														<div
+														onClick={() => onSessionClick?.(session, workspace.id)}
+														onKeyDown={(e) => {
+															if (e.key === "Enter" || e.key === " ") {
+																onSessionClick?.(session, workspace.id);
+															}
+														}}
+														role="button"
+														tabIndex={0}
+													>
+														<MessageSquare
 															className={cn(
-																"text-muted-foreground mt-0.5",
-																sizeClasses.dateText,
+																"mt-0.5 flex-shrink-0 text-primary/70",
+																isMobile ? "w-4 h-4" : "w-3 h-3",
 															)}
-														>
-															{formattedDate}
+														/>
+														<div className="flex-1 min-w-0 text-left">
+															<div className="flex items-center gap-1">
+																{isPinned && (
+																	<Pin className="w-3 h-3 flex-shrink-0 text-primary/70" />
+																)}
+																<span
+																	className={cn(
+																		"truncate font-medium",
+																		sizeClasses.sessionText,
+																	)}
+																>
+																	{getDisplayPiTitle(session)}
+																</span>
+																{isBusy && (
+																	<Loader2 className="w-3 h-3 flex-shrink-0 text-primary animate-spin" />
+																)}
+															</div>
+															{formattedDate && (
+																<div
+																	className={cn(
+																		"text-muted-foreground mt-0.5",
+																		sizeClasses.dateText,
+																	)}
+																>
+																	{formattedDate}
+																</div>
+															)}
 														</div>
+													</div>
+												</ContextMenuTrigger>
+												<ContextMenuContent>
+													{tempId && (
+														<ContextMenuItem
+															onClick={() => {
+																navigator.clipboard.writeText(tempId);
+															}}
+														>
+															<Copy className="w-4 h-4 mr-2" />
+															{tempId}
+														</ContextMenuItem>
 													)}
-												</div>
-											</div>
+													<ContextMenuItem
+														onClick={() => {
+															navigator.clipboard.writeText(session.id);
+														}}
+													>
+														<Copy className="w-4 h-4 mr-2" />
+														{session.id.slice(0, 16)}...
+													</ContextMenuItem>
+													<ContextMenuSeparator />
+													{onPinSession && (
+														<ContextMenuItem
+															onClick={() => onPinSession(session.id)}
+														>
+															<Pin className="w-4 h-4 mr-2" />
+															{isPinned ? t("projects.unpin") : t("projects.pin")}
+														</ContextMenuItem>
+													)}
+													{onRenameSession && (
+														<ContextMenuItem
+															onClick={() => onRenameSession(session.id)}
+														>
+															<Pencil className="w-4 h-4 mr-2" />
+															{t("common.rename")}
+														</ContextMenuItem>
+													)}
+													{(onPinSession || onRenameSession) && onDeleteSession && (
+														<ContextMenuSeparator />
+													)}
+													{onDeleteSession && (
+														<ContextMenuItem
+															variant="destructive"
+															onClick={() => onDeleteSession(session.id)}
+														>
+															<Trash2 className="w-4 h-4 mr-2" />
+															{t("common.delete")}
+														</ContextMenuItem>
+													)}
+												</ContextMenuContent>
+											</ContextMenu>
 										</div>
 									);
 								})}
@@ -373,6 +447,10 @@ export const SidebarSharedWorkspaces = memo(function SidebarSharedWorkspaces({
 	busySessions,
 	selectedChatSessionId,
 	onSessionClick,
+	onRenameSession,
+	onDeleteSession,
+	onPinSession,
+	pinnedSessions,
 	isMobile = false,
 }: SidebarSharedWorkspacesProps) {
 	const { t } = useTranslation();
@@ -586,6 +664,10 @@ export const SidebarSharedWorkspaces = memo(function SidebarSharedWorkspaces({
 								busySessions={busySessions}
 								selectedChatSessionId={selectedChatSessionId}
 								onSessionClick={onSessionClick}
+								onRenameSession={onRenameSession}
+								onDeleteSession={onDeleteSession}
+								onPinSession={onPinSession}
+								pinnedSessions={pinnedSessions}
 								expandedFolders={expandedFolders}
 								toggleFolderExpanded={toggleFolderExpanded}
 							/>

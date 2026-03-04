@@ -916,7 +916,7 @@ const AppShell = memo(function AppShell() {
 						runnerSessions={runnerSessions}
 						busySessions={busySessions}
 						onSharedSessionClick={(session, sharedWorkspaceId) => {
-							createOptimisticChatSession(session.id, session.workspace_path ?? undefined, sharedWorkspaceId);
+							createOptimisticChatSession(session.id, session.workspace_path ?? undefined, sharedWorkspaceId, session);
 							setSelectedChatSessionId(session.id);
 							sidebarState.setMobileMenuOpen(false);
 						}}
@@ -1091,9 +1091,15 @@ const AppShell = memo(function AppShell() {
 														busySessions={busySessions}
 														selectedChatSessionId={selectedChatSessionId}
 														onSessionClick={(session, sharedWorkspaceId) => {
-															createOptimisticChatSession(session.id, session.workspace_path ?? undefined, sharedWorkspaceId);
+															createOptimisticChatSession(session.id, session.workspace_path ?? undefined, sharedWorkspaceId, session);
 															setSelectedChatSessionId(session.id);
 														}}
+														onRenameSession={(id) =>
+															sessionDialogs.handleRenameSession(id, chatHistory)
+														}
+														onDeleteSession={handleDeleteSession}
+														onPinSession={sidebarState.togglePinSession}
+														pinnedSessions={sidebarState.pinnedSessions}
 													/>
 													<div className="w-full px-2 my-1">
 														<div className="h-px w-full bg-sidebar-border/50" />
