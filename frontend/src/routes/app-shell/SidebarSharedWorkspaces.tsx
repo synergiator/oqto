@@ -183,6 +183,12 @@ function WorkspaceContent({
 				}
 			}
 		}
+		// Sort each workdir's sessions newest-first
+		for (const sessions of map.values()) {
+			sessions.sort(
+				(a, b) => (b.updated_at ?? b.created_at) - (a.updated_at ?? a.created_at),
+			);
+		}
 		return map;
 	}, [hstrySessions, workdirs]);
 
