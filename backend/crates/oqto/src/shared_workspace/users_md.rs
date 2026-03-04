@@ -10,13 +10,26 @@ use super::models::SharedWorkspaceMemberInfo;
 pub fn generate_users_md(workspace_name: &str, members: &[SharedWorkspaceMemberInfo]) -> String {
     let mut md = String::new();
 
-    md.push_str(&format!("# {} - Team\n\n", workspace_name));
-    md.push_str("This is a shared workspace. Multiple users collaborate here.\n");
-    md.push_str("Messages are prefixed with the sender's name in square brackets, e.g. `[Alice] hello`.\n\n");
+    md.push_str(&format!("# {} - Multi-User Chat\n\n", workspace_name));
 
+    // Strong, unambiguous multi-user protocol description
+    md.push_str("## IMPORTANT: This is a multi-user conversation\n\n");
+    md.push_str(
+        "Multiple people send messages in this chat. \
+         Each user message starts with a sender tag on its own line:\n\n",
+    );
+    md.push_str("```\n");
+    md.push_str("@sender: Alice\n");
+    md.push_str("Can you review the script?\n");
+    md.push_str("```\n\n");
+    md.push_str(
+        "The `@sender:` line is injected automatically by the system. \
+         It is NOT typed by the user. Treat it as metadata identifying who is speaking.\n\n",
+    );
+
+    md.push_str("## Team members\n\n");
     md.push_str("| Name | Role |\n");
     md.push_str("|------|------|\n");
-
     for member in members {
         md.push_str(&format!(
             "| {} | {} |\n",
@@ -24,10 +37,13 @@ pub fn generate_users_md(workspace_name: &str, members: &[SharedWorkspaceMemberI
         ));
     }
 
-    md.push_str("\n- Address users by name when responding to their specific requests.\n");
-    md.push_str("- NEVER include `[Name]` brackets in your responses. The tags are only for identifying who sent a message.\n");
-    md.push_str("- All members can see the full conversation history.\n");
-    md.push_str("- If users give conflicting instructions, ask for clarification.\n");
+    md.push_str("\n## Rules\n\n");
+    md.push_str("1. When you see `@sender: Name`, that tells you WHO sent the message that follows.\n");
+    md.push_str("2. Address users by their name. Say \"Hi Wismut\" not \"Hi there\".\n");
+    md.push_str("3. NEVER write `@sender:` in your own responses. Only the system adds that.\n");
+    md.push_str("4. Different people may ask different things. Keep track of who asked what.\n");
+    md.push_str("5. If two users give conflicting instructions, name both and ask for clarification.\n");
+    md.push_str("6. All team members see the full conversation.\n");
 
     md
 }
@@ -74,9 +90,10 @@ mod tests {
 
         let md = generate_users_md("Team Alpha", &members);
 
-        assert!(md.contains("# Team Alpha - Team"));
+        assert!(md.contains("# Team Alpha - Multi-User Chat"));
         assert!(md.contains("| Alice Smith | owner |"));
         assert!(md.contains("| Bob Jones | member |"));
+        assert!(md.contains("@sender:"));
         assert!(md.contains("conflicting instructions"));
     }
 

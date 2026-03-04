@@ -15,12 +15,17 @@ const MESSAGE_ID_PATTERN = /^pi-msg-(\d+)$/;
 
 /**
  * Pattern matching `[Name] ...` prefix prepended by the backend for shared
- * workspace messages.  Captures the display name inside the brackets.
+ * workspace messages.
+ *
+ * Supports two formats:
+ * - New: `@sender: Name\n` (on its own line before the message)
+ * - Legacy: `[Name] ` prefix on the first text part
  */
-const SENDER_TAG_RE = /^\[([^\]]+)\]\s*/;
+const SENDER_TAG_NEW_RE = /^@sender:\s*(.+)\n/;
+const SENDER_TAG_LEGACY_RE = /^\[([^\]]+)\]\s*/;
 
 /**
- * Extract a `[Name]` sender tag from user-message text parts.
+ * Extract a sender tag from user-message text parts.
  *
  * Returns the parsed Sender and mutates the parts array in-place to strip the
  * tag prefix from the first text part so it doesn't render in the bubble.
@@ -30,10 +35,18 @@ function extractSenderFromParts(parts: DisplayPart[]): Sender | undefined {
 	for (const part of parts) {
 		if (part.type !== "text") continue;
 		const textPart = part as { type: "text"; text: string };
-		const match = textPart.text.match(SENDER_TAG_RE);
-		if (match) {
-			const name = match[1];
-			textPart.text = textPart.text.slice(match[0].length);
+		// Try new format first: @sender: Name\n
+		const newMatch = textPart.text.match(SENDER_TAG_NEW_RE);
+		if (newMatch) {
+			const name = newMatch[1].trim();
+			textPart.text = textPart.text.slice(newMatch[0].length);
+			return { type: "user", id: name, name };
+		}
+		// Fall back to legacy [Name] format
+		const legacyMatch = textPart.text.match(SENDER_TAG_LEGACY_RE);
+		if (legacyMatch) {
+			const name = legacyMatch[1];
+			textPart.text = textPart.text.slice(legacyMatch[0].length);
 			return { type: "user", id: name, name };
 		}
 		break; // only check the first text part

@@ -487,7 +487,7 @@ impl SharedWorkspaceService {
         match ws {
             Some(_) => {
                 let safe_name = sanitize_display_name(user_display_name);
-                Ok(format!("[{}] {}", safe_name, message))
+                Ok(format!("@sender: {}\n{}", safe_name, message))
             }
             None => Ok(message.to_string()),
         }
