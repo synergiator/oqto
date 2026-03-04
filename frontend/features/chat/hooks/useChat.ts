@@ -367,6 +367,23 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
 			try {
 				const swId = sharedWorkspaceSessionMap.get(sessionId);
 				const history = await getChatMessages(sessionId, swId);
+
+				// Guard: after the async fetch, verify the session is still
+				// active. If the user switched sessions while the request was
+				// in flight, discard the stale result to avoid clobbering the
+				// new session's messages.
+				if (activeSessionIdRef.current !== sessionId) {
+					if (isPiDebugEnabled()) {
+						console.debug(
+							"[useChat] Discarding stale history fetch for",
+							sessionId,
+							"(active is now",
+							activeSessionIdRef.current + ")",
+						);
+					}
+					return;
+				}
+
 				if (history.length === 0) return;
 				const displayMessages = normalizeMessages(
 					history as RawMessage[],
@@ -1868,6 +1885,14 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
 		const unsubscribeResync = manager.onResync(
 			activeSessionId,
 			(_sessionId, stateData, serverMessages) => {
+				// Guard: discard resync if the session is no longer active
+				if (activeSessionIdRef.current !== _sessionId) {
+					console.log(
+						`[useChat] Discarding stale resync for ${_sessionId} (active: ${activeSessionIdRef.current})`,
+					);
+					return;
+				}
+
 				console.log(
 					`[useChat] Resync received for ${_sessionId}: ` +
 						`state=${stateData ? "ok" : "null"}, messages=${serverMessages.length}`,
@@ -1944,9 +1969,15 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
 					// Re-check streaming state after async wait
 					if (isStreamingRef.current) return;
 
+					// Guard: if the session changed while we waited for
+					// the connection, abort to avoid clobbering new state.
+					if (activeSessionIdRef.current !== sid) return;
+
 					// Check if this session is active on the runner
 					try {
 						const activeSessions = await manager.agentListSessions();
+						// Re-check after async wait
+						if (activeSessionIdRef.current !== sid) return;
 						const activeSession = activeSessions.find(
 							(s) => s.session_id === sid,
 						);
@@ -2014,6 +2045,8 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
 							// probe with get_state before falling back to history.
 							try {
 								await manager.agentGetStateWait(sid);
+								// Re-check after async wait
+								if (activeSessionIdRef.current !== sid) return;
 
 								// Session exists -- reattach to enable event forwarding.
 								// Fetch history immediately (same reasoning as above).
