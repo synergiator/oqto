@@ -1,5 +1,9 @@
 # Changes
 
+- 2026-03-04: Fix shared workspace message duplication by implementing deferred client_id persistence that correctly handles Pi context compaction.
+- 2026-03-04: Add client_id to Steer and FollowUp protocol commands for optimistic message matching in shared workspaces.
+- 2026-03-04: Fix hstry upsert to use COALESCE for client_id, preventing NULL overwrites from concurrent persist tasks.
+- 2026-03-04: Serialize hstry persist calls with tokio Mutex to prevent duplicate messages from concurrent index resolution.
 - 2026-03-03: Rename mmry external_api config fields (enable -> enabled, console_enable -> console_enabled) for mmry breaking change.
 - 2026-03-03: Add shared workspaces to mobile menu.
 - 2026-03-03: Update canonical history flow and settings layout, fix type errors from migration.

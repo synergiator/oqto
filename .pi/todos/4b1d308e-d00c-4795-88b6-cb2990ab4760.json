@@ -14,22 +14,28 @@
     },
     {
       "id": "v3",
-      "content": "Rebuild and deploy oqto + runner binaries with targeted client_id update",
+      "content": "Rebuild and deploy oqto + runner binaries",
       "status": "completed",
       "priority": "high"
     },
     {
       "id": "v4",
-      "content": "Test the full dedup flow end-to-end",
-      "status": "in_progress",
+      "content": "Test dedup flow: client_id reaches hstry for both prompt and steer",
+      "status": "completed",
       "priority": "high"
     },
     {
       "id": "v5",
-      "content": "Remove diagnostic warn! logging (revert to debug!)",
+      "content": "Remove diagnostic logging, commit clean fix",
+      "status": "completed",
+      "priority": "medium"
+    },
+    {
+      "id": "v6",
+      "content": "Store memory about the fix",
       "status": "completed",
       "priority": "medium"
     }
   ],
-  "updated_at": "2026-03-04T18:50:36.795Z"
+  "updated_at": "2026-03-04T19:03:30.219Z"
 }
