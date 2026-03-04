@@ -97,15 +97,24 @@ function WorkspaceContent({
 	toggleFolderExpanded: (key: string) => void;
 }) {
 	const [workdirs, setWorkdirs] = useState<SharedWorkspaceWorkdir[]>([]);
+	const [fetchedSessions, setFetchedSessions] = useState<ChatSession[]>([]);
 	const [loading, setLoading] = useState(true);
 
 	useEffect(() => {
 		let cancelled = false;
 		setLoading(true);
 
-		listWorkdirs(workspace.id)
-			.then((wdData) => {
-				if (!cancelled) setWorkdirs(wdData);
+		Promise.all([
+			listWorkdirs(workspace.id),
+			listChatHistory({ shared_workspace_id: workspace.id }).catch(
+				() => [] as ChatSession[],
+			),
+		])
+			.then(([wdData, sessionData]) => {
+				if (!cancelled) {
+					setWorkdirs(wdData);
+					setFetchedSessions(sessionData);
+				}
 			})
 			.catch(() => {})
 			.finally(() => {
@@ -117,15 +126,27 @@ function WorkspaceContent({
 		};
 	}, [workspace.id]);
 
-	// Filter chatHistory to sessions belonging to this workspace (by path prefix)
+	// Merge fetched sessions with optimistic sessions from chatHistory.
+	// Optimistic sessions (created via +) appear in chatHistory before they
+	// exist in hstry. We include them if their workspace_path falls under
+	// this workspace's path.
 	const workspacePath = workspace.path.replace(/\/$/, "");
 	const hstrySessions = useMemo(() => {
-		return chatHistory.filter((s) => {
-			if (s.shared_workspace_id === workspace.id) return true;
+		const byId = new Map(fetchedSessions.map((s) => [s.id, s]));
+		// Add optimistic sessions from chatHistory that match this workspace
+		for (const s of chatHistory) {
+			if (byId.has(s.id)) continue;
+			if (s.shared_workspace_id === workspace.id) {
+				byId.set(s.id, s);
+				continue;
+			}
 			const wp = s.workspace_path?.replace(/\/$/, "");
-			return wp ? (wp === workspacePath || wp.startsWith(`${workspacePath}/`)) : false;
-		});
-	}, [chatHistory, workspace.id, workspacePath]);
+			if (wp && (wp === workspacePath || wp.startsWith(`${workspacePath}/`))) {
+				byId.set(s.id, s);
+			}
+		}
+		return Array.from(byId.values());
+	}, [fetchedSessions, chatHistory, workspace.id, workspacePath]);
 
 	// Group sessions by workdir path
 	const sessionsByWorkdir = useMemo(() => {
