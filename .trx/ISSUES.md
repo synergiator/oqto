@@ -81,16 +81,16 @@ Write the formal spec document at docs/design/byteowlz-app-runtime.md.
 
 Contents:
 - Final list of --app-* CSS variables with semantic descriptions
-- window.apphost JS bridge interface (theme, onThemeChange, future: fetch/saveState/loadState)
+- window.apphost unified interface:
 ...
 
 
 ### [oqto-dbbw] Byteowlz App Runtime: shared contract for portable agent-generated web apps (P1, epic)
 Define and implement the shared contract that lets agent-generated HTML/CSS/JS apps run identically in oqto (iframe via oqto-serve) and omni (inline Tauri webview) without changes.
 
-The shared contract consists of:
-1. CSS Token Contract: 14 --app-* CSS variables (bg, fg, card, card-fg, primary, primary-fg, muted, muted-fg, border, destructive, success, warning, info, font). Apps use ONLY var(--app-*). Each host maps its own palette into these.
-2. JS Host Bridge: window.apphost object with theme property (dark/light) and onThemeChange(cb) subscription.
+## Shared Contract
+
+### 1. CSS Token Contract (--app-* variables)
 ...
 
 
@@ -424,6 +424,24 @@ Implementation:
 ...
 
 
+### [oqto-14b1.6] Runner: app_message command and ServeMessage event routing (P2, task)
+Add support in the runner for bidirectional app messaging.
+
+Inbound (frontend -> agent):
+- New mux command: {channel: "agent", cmd: "app_message", session_id, serve_id, data}
+- Runner receives, formats as structured input for Pi (e.g. JSON on stdin or a special tool response)
+...
+
+
+### [oqto-14b1.5] ServeView: postMessage bridge for apphost.send/onMessage (P2, task)
+Implement the bidirectional messaging channel between served apps and the agent session.
+
+Outbound (app -> agent):
+- iframe calls apphost.send(data)
+- apphost shim does window.parent.postMessage({type: "apphost:send", data}, "*")
+...
+
+
 ### [oqto-h8v2.2] Theme selection UI in settings (P2, task)
 Add theme picker to the settings panel.
 
@@ -461,11 +479,11 @@ Templates (all using --app-* tokens from byteowlz app runtime contract):
 
 
 ### [oqto-dbbw.3] Create apphost-shim.js bridge script (P2, task)
-Tiny JS shim (~30 lines) that provides window.apphost in any context:
+Tiny JS shim (~50 lines) that provides window.apphost in any context.
 
-- If window.apphost already exists (set by host), does nothing
-- Otherwise sets up a postMessage listener for iframe contexts (oqto-serve)
-- Exposes: theme (dark/light), onThemeChange(cb)
+Behavior:
+- If window.apphost already exists (set by host before app loads), does nothing
+- Otherwise sets up postMessage listener for iframe contexts (oqto-serve):
 ...
 
 
@@ -1032,6 +1050,15 @@ Enable multiple platform users to access the same project/workspace with proper 
 ## Design
 
 ### Core Concept
+...
+
+
+### [oqto-14b1.7] Serve proxy: apphost.fetch, readFile, writeFile capabilities (P3, task)
+Implement optional capabilities on the apphost bridge in oqto.
+
+apphost.fetch(url, opts):
+- App posts fetch request via postMessage to ServeView
+- ServeView proxies through backend (bypasses iframe CORS restrictions)
 ...
 
 
@@ -1859,7 +1886,7 @@ Desired behavior: Tool calls hidden by default, toggle to show
 - [workspace-11] Flatten project cards: remove shadows and set white 10% opacity (closed 2025-12-12)
 - [workspace-lfu] Frontend UI Architecture - Professional & Extensible App System (closed 2025-12-09)
 - [workspace-lfu.1] Design System - Professional Color Palette & Typography (closed 2025-12-09)
-- [octo-k8z1.6] Frontend: Browser toolbar (URL bar, navigation buttons) (closed )
 - [octo-k8z1.4] Frontend: Add BrowserView component with canvas rendering (closed )
-- [octo-k8z1.3] Backend: Forward input events (mouse/keyboard) to agent-browser (closed )
+- [octo-k8z1.6] Frontend: Browser toolbar (URL bar, navigation buttons) (closed )
 - [octo-k8z1.7] MCP: Add browser tools for agent control (open, snapshot, click, fill) (closed )
+- [octo-k8z1.3] Backend: Forward input events (mouse/keyboard) to agent-browser (closed )
