@@ -25,6 +25,7 @@ pub fn generate_users_md(workspace_name: &str, members: &[SharedWorkspaceMemberI
     }
 
     md.push_str("\n- Address users by name when responding to their specific requests.\n");
+    md.push_str("- NEVER include `[Name]` brackets in your responses. The tags are only for identifying who sent a message.\n");
     md.push_str("- All members can see the full conversation history.\n");
     md.push_str("- If users give conflicting instructions, ask for clarification.\n");
 

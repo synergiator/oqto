@@ -122,8 +122,30 @@ const AppShell = memo(function AppShell() {
 		selectedChatFromHistory?.workspace_path ?? null,
 	);
 	const sessionDialogs = useSessionDialogs();
+
+	// Shared workspaces (must be before sessionData so we can filter)
+	const sharedWs = useSharedWorkspaces();
+
+	// Filter out sessions that belong to shared workspaces.
+	// A session belongs to a shared workspace if its workspace_path starts
+	// with the shared workspace's path, or if it has shared_workspace_id set.
+	const personalChatHistory = useMemo(() => {
+		const swPaths = sharedWs.sharedWorkspaces.map((ws) =>
+			ws.path.replace(/\/$/, ""),
+		);
+		if (swPaths.length === 0) return chatHistory;
+		return chatHistory.filter((session) => {
+			if (session.shared_workspace_id) return false;
+			const wp = session.workspace_path?.replace(/\/$/, "");
+			if (!wp) return true;
+			return !swPaths.some(
+				(swp) => wp === swp || wp.startsWith(`${swp}/`),
+			);
+		});
+	}, [chatHistory, sharedWs.sharedWorkspaces]);
+
 	const sessionData = useSessionData({
-		chatHistory,
+		chatHistory: personalChatHistory,
 		workspaceDirectories: projectActions.workspaceDirectories,
 		locale,
 		deferredSearch,
@@ -133,9 +155,6 @@ const AppShell = memo(function AppShell() {
 		projectSortBy: projectActions.projectSortBy,
 		projectSortAsc: projectActions.projectSortAsc,
 	});
-
-	// Shared workspaces
-	const sharedWs = useSharedWorkspaces();
 	const [swDialogOpen, setSwDialogOpen] = useState(false);
 	const [swEditTarget, setSwEditTarget] = useState<SharedWorkspaceInfo | null>(
 		null,
@@ -993,7 +1012,7 @@ const AppShell = memo(function AppShell() {
 								>
 									<SidebarSessions
 										locale={locale}
-										chatHistory={chatHistory}
+										chatHistory={personalChatHistory}
 										sessionHierarchy={sessionData.sessionHierarchy}
 										sessionsByProject={sessionData.sessionsByProject}
 										filteredSessions={sessionData.filteredSessions}
@@ -1067,6 +1086,7 @@ const AppShell = memo(function AppShell() {
 														onSelectWorkdir={(_ws, wd) => {
 															void createNewChat(wd.path);
 														}}
+														chatHistory={chatHistory}
 														runnerSessions={runnerSessions}
 														busySessions={busySessions}
 														selectedChatSessionId={selectedChatSessionId}

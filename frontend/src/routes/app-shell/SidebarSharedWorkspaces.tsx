@@ -54,6 +54,8 @@ export interface SidebarSharedWorkspacesProps {
 		workspace: SharedWorkspaceInfo,
 		workdir: SharedWorkspaceWorkdir,
 	) => void;
+	/** Full chat history from context (includes optimistic sessions). */
+	chatHistory: ChatSession[];
 	runnerSessions?: Array<{
 		session_id: string;
 		state: string;
@@ -73,6 +75,7 @@ function WorkspaceContent({
 	isMobile,
 	sizeClasses,
 	onSelectWorkdir,
+	chatHistory,
 	busySessions,
 	selectedChatSessionId,
 	onSessionClick,
@@ -86,6 +89,7 @@ function WorkspaceContent({
 		workspace: SharedWorkspaceInfo,
 		workdir: SharedWorkspaceWorkdir,
 	) => void;
+	chatHistory: ChatSession[];
 	busySessions?: Set<string>;
 	selectedChatSessionId: string | null;
 	onSessionClick?: (session: ChatSession, sharedWorkspaceId: string) => void;
@@ -93,24 +97,15 @@ function WorkspaceContent({
 	toggleFolderExpanded: (key: string) => void;
 }) {
 	const [workdirs, setWorkdirs] = useState<SharedWorkspaceWorkdir[]>([]);
-	const [hstrySessions, setHstrySessions] = useState<ChatSession[]>([]);
 	const [loading, setLoading] = useState(true);
 
 	useEffect(() => {
 		let cancelled = false;
 		setLoading(true);
 
-		Promise.all([
-			listWorkdirs(workspace.id),
-			listChatHistory({ shared_workspace_id: workspace.id }).catch(
-				() => [] as ChatSession[],
-			),
-		])
-			.then(([wdData, sessionData]) => {
-				if (!cancelled) {
-					setWorkdirs(wdData);
-					setHstrySessions(sessionData);
-				}
+		listWorkdirs(workspace.id)
+			.then((wdData) => {
+				if (!cancelled) setWorkdirs(wdData);
 			})
 			.catch(() => {})
 			.finally(() => {
@@ -121,6 +116,16 @@ function WorkspaceContent({
 			cancelled = true;
 		};
 	}, [workspace.id]);
+
+	// Filter chatHistory to sessions belonging to this workspace (by path prefix)
+	const workspacePath = workspace.path.replace(/\/$/, "");
+	const hstrySessions = useMemo(() => {
+		return chatHistory.filter((s) => {
+			if (s.shared_workspace_id === workspace.id) return true;
+			const wp = s.workspace_path?.replace(/\/$/, "");
+			return wp ? (wp === workspacePath || wp.startsWith(`${workspacePath}/`)) : false;
+		});
+	}, [chatHistory, workspace.id, workspacePath]);
 
 	// Group sessions by workdir path
 	const sessionsByWorkdir = useMemo(() => {
@@ -342,6 +347,7 @@ export const SidebarSharedWorkspaces = memo(function SidebarSharedWorkspaces({
 	onNewProjectInWorkspace,
 	onDeleteWorkspace,
 	onSelectWorkdir,
+	chatHistory,
 	runnerSessions,
 	busySessions,
 	selectedChatSessionId,
@@ -555,6 +561,7 @@ export const SidebarSharedWorkspaces = memo(function SidebarSharedWorkspaces({
 								isMobile={isMobile}
 								sizeClasses={sizeClasses}
 								onSelectWorkdir={onSelectWorkdir}
+								chatHistory={chatHistory}
 								busySessions={busySessions}
 								selectedChatSessionId={selectedChatSessionId}
 								onSessionClick={onSessionClick}

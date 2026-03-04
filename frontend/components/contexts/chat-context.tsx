@@ -89,7 +89,6 @@ export interface ChatContextValue {
 	) => void;
 	createNewChat: (
 		workspacePath?: string,
-		options?: { optimisticId?: string },
 	) => Promise<string | null>;
 	deleteChatSession: (sessionId: string) => Promise<boolean>;
 	renameChatSession: (sessionId: string, title: string) => Promise<boolean>;
@@ -712,7 +711,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 				resolvedPath = getSessionWorkspacePath(selectedChatSessionId);
 			}
 			const sessionId = createPiSessionId();
-			createOptimisticChatSession(sessionId, resolvedPath);
+			createOptimisticChatSession(sessionId, resolvedPath ?? undefined);
 			setSelectedChatSessionId(sessionId);
 			void refreshChatHistory();
 			return sessionId;

@@ -273,6 +273,7 @@ export const MobileMenu = memo(function MobileMenu({
 										onNewProjectInWorkspace={onNewProjectInWorkspace}
 										onDeleteWorkspace={onDeleteWorkspace}
 										onSelectWorkdir={onSelectWorkdir}
+										chatHistory={chatHistory}
 										runnerSessions={runnerSessions}
 										busySessions={busySessions}
 										selectedChatSessionId={selectedChatSessionId}
