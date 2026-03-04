@@ -762,24 +762,6 @@ Keep docker multi-user working:
 ### [octo-vbzq] Add Edit button to file viewer toolbar (P2, feature)
 Add an Edit button with pencil icon to the file viewer toolbar, alongside the existing expand/collapse, search, and close panel buttons. The Edit button should open the file for editing.
 
-### [octo-58xa.3] WebView: MCP tool for opening webviews (P2, task)
-Add MCP tool for agents to open webviews.
-
-## Tool: webview_open
-Parameters:
-  - url: string (required) - localhost:PORT or path
-...
-
-
-### [octo-58xa.2] WebView: Frontend iframe component (P2, task)
-Create WebView React component for displaying agent web apps.
-
-## Component: WebView
-Props:
-  - url: string
-...
-
-
 ### [octo-k8z1.13] Browser: User interaction handoff mode (OAuth, captcha, 2FA) (P2, task)
 When agent encounters OAuth, captcha, or 2FA, it needs to hand control to user.
 
@@ -1256,6 +1238,8 @@ Desired behavior: Tool calls hidden by default, toggle to show
 
 ## Closed
 
+- [octo-58xa.3] WebView: MCP tool for opening webviews (closed 2026-03-04)
+- [octo-58xa.2] WebView: Frontend iframe component (closed 2026-03-04)
 - [octo-58xa.1] WebView: Backend proxy for localhost servers (closed 2026-03-04)
 - [octo-58xa] Agent WebView: Iframe embed for agent-spawned web apps (closed 2026-03-04)
 - [oqto-fbrj] eavs: compat settings now wired into proxy transformer (closed 2026-03-03)
@@ -1887,6 +1871,6 @@ Desired behavior: Tool calls hidden by default, toggle to show
 - [workspace-lfu] Frontend UI Architecture - Professional & Extensible App System (closed 2025-12-09)
 - [workspace-lfu.1] Design System - Professional Color Palette & Typography (closed 2025-12-09)
 - [octo-k8z1.4] Frontend: Add BrowserView component with canvas rendering (closed )
-- [octo-k8z1.6] Frontend: Browser toolbar (URL bar, navigation buttons) (closed )
 - [octo-k8z1.7] MCP: Add browser tools for agent control (open, snapshot, click, fill) (closed )
 - [octo-k8z1.3] Backend: Forward input events (mouse/keyboard) to agent-browser (closed )
+- [octo-k8z1.6] Frontend: Browser toolbar (URL bar, navigation buttons) (closed )
