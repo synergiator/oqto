@@ -1,35 +1,29 @@
 {
   "todos": [
     {
-      "id": "e1",
-      "content": "Create empty-response-guard Pi extension",
+      "id": "d1",
+      "content": "Analyze session.create deadlock pattern from logs",
       "status": "completed",
       "priority": "high"
     },
     {
-      "id": "e2",
-      "content": "Add to admin extension provisioning",
+      "id": "d2",
+      "content": "Root cause: runner client read_line has no timeout, blocks tokio tasks forever",
       "status": "completed",
       "priority": "high"
     },
     {
-      "id": "e3",
-      "content": "Deploy to archvm (local)",
+      "id": "d3",
+      "content": "Add timeout to runner client request_once + pi_subscribe",
       "status": "completed",
       "priority": "high"
     },
     {
-      "id": "e4",
-      "content": "Deploy to octo-azure (all users)",
-      "status": "completed",
-      "priority": "high"
-    },
-    {
-      "id": "e5",
-      "content": "Commit and push",
+      "id": "d4",
+      "content": "Build, deploy, verify on both servers",
       "status": "in_progress",
-      "priority": "medium"
+      "priority": "high"
     }
   ],
-  "updated_at": "2026-03-05T09:04:57.400Z"
+  "updated_at": "2026-03-05T15:00:47.993Z"
 }

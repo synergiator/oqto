@@ -11,6 +11,12 @@ use tokio::net::UnixStream;
 
 use super::protocol::*;
 
+/// Timeout for a single runner request (connect + write + read response).
+/// If the runner doesn't respond within this time, the request fails with a
+/// timeout error. This prevents the backend from deadlocking when the runner
+/// is stuck or overloaded.
+const RUNNER_REQUEST_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(30);
+
 /// Default socket path pattern.
 /// Uses XDG_RUNTIME_DIR if available, otherwise falls back to /tmp.
 pub const DEFAULT_SOCKET_PATTERN: &str = "{runtime_dir}/oqto-runner.sock";
@@ -119,6 +125,18 @@ impl RunnerClient {
 
     /// Single attempt to send a request and receive a response.
     async fn request_once(&self, req: &RunnerRequest) -> Result<RunnerResponse> {
+        tokio::time::timeout(RUNNER_REQUEST_TIMEOUT, self.request_once_inner(req))
+            .await
+            .map_err(|_| {
+                anyhow::anyhow!(
+                    "runner request timed out after {:?} (socket: {:?})",
+                    RUNNER_REQUEST_TIMEOUT,
+                    self.socket_path,
+                )
+            })?
+    }
+
+    async fn request_once_inner(&self, req: &RunnerRequest) -> Result<RunnerResponse> {
         let mut stream = UnixStream::connect(&self.socket_path)
             .await
             .with_context(|| format!("connecting to runner at {:?}", self.socket_path))?;
@@ -802,6 +820,44 @@ impl RunnerClient {
     /// Subscribe to events from a Pi session.
     /// Returns a subscription that yields Pi events as they arrive.
     pub async fn pi_subscribe(&self, session_id: &str) -> Result<PiSubscription> {
+        // Timeout for the connect + handshake phase only. Once the subscription
+        // is established, the streaming read loop runs without a global timeout
+        // (individual events have their own semantics).
+        let (lines, session_id, resp) = tokio::time::timeout(
+            RUNNER_REQUEST_TIMEOUT,
+            self.pi_subscribe_handshake(session_id),
+        )
+        .await
+        .map_err(|_| {
+            anyhow::anyhow!(
+                "pi_subscribe handshake timed out after {:?} (socket: {:?})",
+                RUNNER_REQUEST_TIMEOUT,
+                self.socket_path,
+            )
+        })??;
+
+        match resp {
+            RunnerResponse::PiSubscribed(_) => Ok(PiSubscription {
+                session_id,
+                lines: lines.0,
+                _writer: lines.1,
+            }),
+            RunnerResponse::Error(e) => {
+                anyhow::bail!("runner error ({:?}): {}", e.code, e.message);
+            }
+            _ => anyhow::bail!("unexpected response to pi_subscribe"),
+        }
+    }
+
+    /// Internal handshake for pi_subscribe (separated to wrap with timeout).
+    async fn pi_subscribe_handshake(
+        &self,
+        session_id: &str,
+    ) -> Result<(
+        (tokio::io::Lines<BufReader<tokio::net::unix::OwnedReadHalf>>, tokio::net::unix::OwnedWriteHalf),
+        String,
+        RunnerResponse,
+    )> {
         let stream = UnixStream::connect(&self.socket_path)
             .await
             .with_context(|| format!("connecting to runner at {:?}", self.socket_path))?;
@@ -833,17 +889,7 @@ impl RunnerClient {
 
         let resp: RunnerResponse = serde_json::from_str(&first_line).context("parsing response")?;
 
-        match resp {
-            RunnerResponse::PiSubscribed(_) => Ok(PiSubscription {
-                session_id,
-                lines,
-                _writer: writer,
-            }),
-            RunnerResponse::Error(e) => {
-                anyhow::bail!("runner error ({:?}): {}", e.code, e.message);
-            }
-            _ => anyhow::bail!("unexpected response to pi_subscribe"),
-        }
+        Ok(((lines, writer), session_id, resp))
     }
 
     /// Unsubscribe from a Pi session's events.
